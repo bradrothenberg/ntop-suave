@@ -1,0 +1,364 @@
+{
+  "design_vector": {
+    "stages": [
+      {
+        "index": 1,
+        "D": 0.42,
+        "L": 2.6,
+        "m_propellant": 220.0,
+        "F_thrust": 45000.0,
+        "t_wall": 0.0032,
+        "p_c": 8000000.0,
+        "eps_nozzle": 6.0,
+        "jettisoned": true,
+        "n_fin": 4,
+        "b_fin": 0.2,
+        "c_r_fin": 0.4,
+        "taper_fin": 0.5,
+        "sweep_fin": 0.7330382858376184,
+        "t_fin": 0.01
+      },
+      {
+        "index": 2,
+        "D": 0.34,
+        "L": 2.4,
+        "m_propellant": 90.0,
+        "F_thrust": 18000.0,
+        "t_wall": 0.0026,
+        "p_c": 8000000.0,
+        "eps_nozzle": 18.0,
+        "jettisoned": false,
+        "n_fin": 4,
+        "b_fin": 0.14,
+        "c_r_fin": 0.3,
+        "taper_fin": 0.5,
+        "sweep_fin": 0.7330382858376184,
+        "t_fin": 0.01
+      }
+    ],
+    "strakes": {
+      "n": 4,
+      "height": 0.03,
+      "length": 1.4,
+      "thickness": 0.008,
+      "x_le": 0.95,
+      "sweep_le": 0.0
+    },
+    "acs": {
+      "thrust": 39044.771446810104,
+      "burn_time": 3.0,
+      "isp": 235.0,
+      "inert_fraction": 0.55
+    },
+    "f_nose": 3.0,
+    "nose_shape": "tangent_ogive",
+    "L_interstage": 0.28,
+    "t_interstage": 0.0025,
+    "L_seeker": 0.32,
+    "L_payload_bay": 0.4,
+    "gamma_pitch": 0.6632251157578453,
+    "t_pitch": 5.0,
+    "pitch_rate_max": 0.13962634015954636,
+    "L_total": 5.28,
+    "D_max": 0.42,
+    "L_nose": 1.02,
+    "m_propellant_total": 310.0,
+    "n_stages": 2
+  },
+  "requirements": {
+    "slant_range_min": 160934.0,
+    "h_intercept_min": 15000.0,
+    "mach_intercept_min": 3.0,
+    "m_payload": 75.0,
+    "h_launch": 0.0,
+    "gamma_launch": 1.5707963267948966,
+    "D_max": 0.42,
+    "L_max": 5.4,
+    "m0_max": 1400.0,
+    "static_margin_min": 1.0,
+    "q_max": 350000.0,
+    "lateral_g_min": 15.0,
+    "h_stage1_burnout_max": 20000.0,
+    "alpha_max": 0.3490658503988659,
+    "t_coast_separation": 0.6
+  },
+  "geometry_measured": true,
+  "launch_mass_kg": 592.2379573804823,
+  "pitchover_deg": 38.0,
+  "intercept": {
+    "reached_slant_range": true,
+    "slant_range": 160934.0000000008,
+    "ground_range": 159692.91068825746,
+    "altitude": 19948.098453548937,
+    "mach": 4.0042366014141635,
+    "velocity": 1181.528074513498,
+    "time": 157.7988005014,
+    "mass": 250.96584497105138,
+    "q": 62565.018652279,
+    "lateral_g_available": 7.450558974089078,
+    "termination": "slant_range"
+  },
+  "lateral_g": {
+    "aerodynamic": 7.450558974089078,
+    "acs": 15.864543831023108,
+    "total": 15.864543831023108,
+    "cn_max": 3.2280842353611616
+  },
+  "constraints": [
+    {
+      "name": "A2 slant range [m]",
+      "value": 160934.0000000008,
+      "limit": 160934.0,
+      "sense": ">=",
+      "met": true
+    },
+    {
+      "name": "A3 intercept alt [m]",
+      "value": 19948.098453548937,
+      "limit": 15000.0,
+      "sense": ">=",
+      "met": true
+    },
+    {
+      "name": "A4 intercept Mach",
+      "value": 4.0042366014141635,
+      "limit": 3.0,
+      "sense": ">=",
+      "met": true
+    },
+    {
+      "name": "A6 max diameter [m]",
+      "value": 0.42,
+      "limit": 0.42,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "A7 stacked length [m]",
+      "value": 5.28,
+      "limit": 5.4,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "A8 launch mass [kg]",
+      "value": 592.2379573804823,
+      "limit": 1400.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "A10 q_max [Pa]",
+      "value": 304577.2602132959,
+      "limit": 350000.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "A11 lateral g",
+      "value": 15.864543831023108,
+      "limit": 15.0,
+      "sense": ">=",
+      "met": true
+    },
+    {
+      "name": "A12 s1 burnout alt [m]",
+      "value": 4664.223757848268,
+      "limit": 20000.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "grain L/D stage 1",
+      "value": 2.6078629305238867,
+      "limit": 8.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "grain L/D stage 2",
+      "value": 1.7970503789700736,
+      "limit": 8.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "stage 1 vol loading",
+      "value": 0.37467260080728704,
+      "limit": 1.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "stage 2 vol loading",
+      "value": 0.8922212645613128,
+      "limit": 1.0,
+      "sense": "<=",
+      "met": true
+    },
+    {
+      "name": "stage 1 grain closes",
+      "value": 1.0,
+      "limit": 1.0,
+      "sense": ">=",
+      "met": true
+    },
+    {
+      "name": "stage 2 grain closes",
+      "value": 1.0,
+      "limit": 1.0,
+      "sense": ">=",
+      "met": true
+    }
+  ],
+  "feasible": true,
+  "mass_statement": [
+    {
+      "stage": 1,
+      "item": "Propellant",
+      "mass_kg": 220.0,
+      "station_m": 4.084,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 1,
+      "item": "Airframe structure and surfaces",
+      "mass_kg": 39.95598318877709,
+      "station_m": 4.171203134549663,
+      "provenance": "ntop_measured"
+    },
+    {
+      "stage": 1,
+      "item": "Dry-mass contingency",
+      "mass_kg": 11.108560490463391,
+      "station_m": 4.148799942015777,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 1,
+      "item": "Motor hardware not modelled",
+      "mass_kg": 7.8638262484483334,
+      "station_m": 4.084,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 1,
+      "item": "Motor insulation",
+      "mass_kg": 6.7601480058121295,
+      "station_m": 4.084,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 1,
+      "item": "Motor case",
+      "mass_kg": 4.564031837902073,
+      "station_m": 4.084,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 1,
+      "item": "Nozzle assembly",
+      "mass_kg": 1.4702356660792166,
+      "station_m": 5.15,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 1,
+      "item": "Igniter",
+      "mass_kg": 1.1,
+      "station_m": 3.1271999999999998,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 2,
+      "item": "Propellant",
+      "mass_kg": 90.0,
+      "station_m": 2.07,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 2,
+      "item": "Payload",
+      "mass_kg": 75.0,
+      "station_m": 1.54,
+      "provenance": "requirement"
+    },
+    {
+      "stage": 2,
+      "item": "Airframe structure and surfaces",
+      "mass_kg": 24.170876959041728,
+      "station_m": 1.5179891648734536,
+      "provenance": "ntop_measured"
+    },
+    {
+      "stage": 2,
+      "item": "Radome",
+      "mass_kg": 11.518386639711048,
+      "station_m": 0.459,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 2,
+      "item": "Dry-mass contingency",
+      "mass_kg": 8.026265249973301,
+      "station_m": 1.3602712161468737,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 2,
+      "item": "Motor insulation",
+      "mass_kg": 3.5600572707574685,
+      "station_m": 2.07,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 2,
+      "item": "Motor case",
+      "mass_kg": 1.873857134413463,
+      "station_m": 2.07,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 2,
+      "item": "Nozzle assembly",
+      "mass_kg": 1.7640147804111905,
+      "station_m": 2.28,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 2,
+      "item": "Motor hardware not modelled",
+      "mass_kg": 1.2531697155167763,
+      "station_m": 2.07,
+      "provenance": "correlation"
+    },
+    {
+      "stage": 2,
+      "item": "Igniter",
+      "mass_kg": 0.45,
+      "station_m": 1.8059999999999998,
+      "provenance": "analytic"
+    },
+    {
+      "stage": 0,
+      "item": "Interstage",
+      "mass_kg": 3.0164901017136256,
+      "station_m": 2.54,
+      "provenance": "analytic"
+    }
+  ],
+  "jettisoned_kg": 31.264437113078426,
+  "acs": {
+    "thrust": 39044.771446810104,
+    "burn_time": 3.0,
+    "isp": 235.0,
+    "inert_fraction": 0.55
+  },
+  "warnings": [
+    "stage 1 motor inert mass raised from a bottom-up 13.9 kg to the tactical-motor correlation floor 21.8 kg; the bottom-up model is incomplete by 7.9 kg. See SOURCES['prop_iv1.stage_inert_incomplete'].",
+    "stage 2 motor inert mass raised from a bottom-up 7.6 kg to the tactical-motor correlation floor 8.9 kg; the bottom-up model is incomplete by 1.3 kg. See SOURCES['prop_iv1.stage_inert_incomplete'].",
+    "stage 1: motor inert raised from 13.9 kg to the correlation floor 21.8 kg",
+    "stage 2: motor inert raised from 7.6 kg to the correlation floor 8.9 kg",
+    "interstage 3.02 kg (shell 2.37, rings 0.64); separation hardware is not costed"
+  ]
+}
