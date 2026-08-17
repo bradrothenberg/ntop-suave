@@ -1,0 +1,15 @@
+item,mass_kg,percent_of_total,station_m_from_nose,provenance,note
+"Propellant, sustain",172.000,31.03,2.5526,analytic,
+"Propellant, boost",130.000,23.45,1.5371,analytic,
+Warhead,90.000,16.24,0.8250,requirement,SPEC R4
+Airframe structure and fins,41.073,7.41,2.2846,ntop_measured,nTop solid volume 0.01461675377333512 m^3
+"Propellant, terminal",40.000,7.22,3.2655,analytic,
+Dry-mass contingency,18.663,3.37,1.7886,correlation,"18 percent on 103.7 kg of dry mass, AIAA S-120A Class-I"
+"Guidance, seeker, actuation",15.000,2.71,0.4250,requirement,SPEC R5
+Radome,13.784,2.49,0.5355,analytic,"ogive area 0.8836 m^2 x 6.0 mm, thickness is a guess"
+Motor hardware not modelled,13.154,2.37,2.2500,correlation,"bottom-up sum 20.7 kg raised to the tactical-motor correlation floor 33.8 kg (mass fraction 0.92); covers skirts, joints, closures, nozzle liner and exit cone"
+Motor insulation,10.510,1.90,2.2500,analytic,
+Motor case,5.597,1.01,2.2500,analytic,t = 1.20 mm
+Nozzle assembly,2.853,0.51,3.5200,correlation,
+Igniter,1.710,0.31,1.1500,analytic,guess
+TOTAL,554.344,100.00,1.9168,,

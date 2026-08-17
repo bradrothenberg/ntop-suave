@@ -1,0 +1,113 @@
+{
+  "inputs": [
+    {
+      "name": "Body Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.35
+    },
+    {
+      "name": "Overall Length",
+      "type": "real",
+      "units": "m",
+      "value": 3.6
+    },
+    {
+      "name": "Nose Fineness",
+      "type": "real",
+      "value": 3.4
+    },
+    {
+      "name": "Wall Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.003
+    },
+    {
+      "name": "Boattail Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.2
+    },
+    {
+      "name": "Base Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.3
+    },
+    {
+      "name": "Fin Semi Span",
+      "type": "real",
+      "units": "m",
+      "value": 0.23
+    },
+    {
+      "name": "Fin Root Chord",
+      "type": "real",
+      "units": "m",
+      "value": 0.42
+    },
+    {
+      "name": "Fin Taper Ratio",
+      "type": "real",
+      "value": 0.45
+    },
+    {
+      "name": "Fin Sweep",
+      "type": "real",
+      "units": "rad",
+      "value": 0.7853981633974483
+    },
+    {
+      "name": "Fin Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.012
+    },
+    {
+      "name": "Fin TE Gap",
+      "type": "real",
+      "units": "m",
+      "value": 0.05
+    },
+    {
+      "name": "Seeker Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.3
+    },
+    {
+      "name": "Guidance Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.25
+    },
+    {
+      "name": "Warhead Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.55
+    },
+    {
+      "name": "Mesh Tolerance",
+      "type": "real",
+      "units": "m",
+      "value": 0.005
+    },
+    {
+      "name": "STL Path",
+      "type": "file_path",
+      "value": "runs/SV-1/converged/geom/sv1.stl"
+    },
+    {
+      "name": "STEP Path",
+      "type": "file_path",
+      "value": "runs/SV-1/converged/geom/sv1.step"
+    },
+    {
+      "name": "Implicit Path",
+      "type": "file_path",
+      "value": "runs/SV-1/converged/geom/sv1.implicit"
+    }
+  ]
+}

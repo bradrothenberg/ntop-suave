@@ -1,0 +1,13 @@
+area,check,result,unit
+integrator,vacuum ballistic range vs closed-form parabola,1.954e-14,relative
+integrator,vacuum ballistic apogee,2.109e-15,relative
+integrator,burnout speed vs Tsiolkovsky less gravity loss,1.749e-13,relative
+integrator,terminal velocity vs sqrt(2mg/(rho S CD)),8.704e-10,relative
+integrator,specific-energy drift over 100 s,6.453e-15,relative
+integrator,RK4 order ratios (expect 16),"15.93, 16.01, 15.76",-
+aero,CD0 mean bias vs Basic Finner,-14.6,percent
+aero,CN_alpha mean bias vs Basic Finner,-10.7,percent
+aero,centre of pressure mean bias vs Basic Finner,+2.0,percent
+aero,CD0 calibration factor applied in the loop,1.171,-
+geometry,"nTop volume error, 25 mm sphere, mass_properties",0.0104,percent
+geometry,"STL volume error, 25 mm sphere",0.169,percent

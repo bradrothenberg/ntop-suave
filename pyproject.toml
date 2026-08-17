@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ntop-suave"
+version = "0.1.0"
+description = "Coupled conceptual design: nTop for geometry, SUAVE for physics, wired into a fixed point"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+
+# These pins are NOT cosmetic. SUAVE 2.5.2 breaks on all three current majors:
+#   numpy 2.x        - SUAVE fails outright
+#   scipy >= 1.14    - SUAVE imports scipy.integrate.cumtrapz, removed in 1.14
+#   setuptools >= 81 - SUAVE's bundled pint imports pkg_resources, removed in 81
+# Upgrading any of them stops the whole repo importing.
+dependencies = [
+    "numpy>=1.26,<2",
+    "scipy>=1.11,<1.14",
+    "setuptools<81",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "plotly>=5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pyvista>=0.44",
+    "reportlab>=4.0",
+    "pillow>=10.0",
+    "pymupdf>=1.24",
+]
+
+[tool.setuptools.packages.find]
+include = ["rocketgen*"]
+exclude = ["vendor*", "runs*", "tests*", "examples*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # SUAVE's bundled pint imports pkg_resources on every import.
+    "ignore:pkg_resources is deprecated:UserWarning",
+]

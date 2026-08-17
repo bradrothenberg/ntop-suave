@@ -1,0 +1,14 @@
+quantity,value,unit,requirement,status
+launch mass,554.3,kg,<= 1100,met
+burnout mass,212.3,kg,,
+range,189.5,km,>= 185,met
+Mach at impact,1.66,-,>= 1.50,met
+max dynamic pressure,195.1,kPa,<= 200,"met, ACTIVE"
+flight time,308.9,s,,
+body diameter,0.350,m,<= 0.45,met
+overall length,3.600,m,<= 4.20,met
+"fin span, tip to tip",0.810,m,<= 0.90,met
+"centre of gravity, launch",1.917,m from nose,,
+"centre of gravity, burnout",1.380,m from nose,,
+nTop-measured mass fraction,7.4,percent,,
+geometry measured by nTop,True,-,,

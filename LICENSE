@@ -1,0 +1,35 @@
+MIT License
+
+Copyright (c) 2026 Brad Rothenberg
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+THIRD-PARTY NOTICES
+
+SUAVE (Stanford University Aerospace Vehicle Environment) is licensed under the
+GNU Lesser General Public License version 2.1. SUAVE is NOT redistributed in
+this repository. scripts/bootstrap.py fetches it from
+https://github.com/suavecode/SUAVE into vendor/, which is gitignored.
+
+nTop and nTop Automate (ntopcl) are commercial products of nTop. They are
+licensed separately and are not included here. The nTop block and type
+universe files that ntopgen consumes are nTop's property and are likewise not
+included; scripts/bootstrap.py locates them on the user's own machine.

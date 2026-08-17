@@ -1,0 +1,11 @@
+constraint,value,sense,limit,units,margin_fraction,met
+R3 range,189480,>=,185000,m,0.02422,yes
+R6 terminal Mach,1.65852,>=,1.5,-,0.10568,yes
+R7 diameter,0.35,<=,0.45,m,0.22222,yes
+R8 length,3.6,<=,4.2,m,0.14286,yes
+R9 launch mass,554.344,<=,1100,kg,0.49605,yes
+R10 static margin,1.22669,>=,1,calibres,0.22669,yes
+R11 fin span,0.81,<=,0.9,m,0.10000,yes
+q_max,195100,<=,200000,Pa,0.02450,yes
+grain L/D lower,7.40529,>=,1,-,6.40529,yes
+grain L/D upper,7.40529,<=,8,-,0.07434,yes

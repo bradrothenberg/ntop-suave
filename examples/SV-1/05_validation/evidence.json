@@ -1,0 +1,423 @@
+{
+  "integrator": {
+    "vacuum_range_rel": 1.9539925233402755e-14,
+    "vacuum_apogee_rel": 2.1094237467877974e-15,
+    "rk4_dt": [
+      0.8,
+      0.4,
+      0.2,
+      0.1
+    ],
+    "rk4_order_ratios": [
+      15.934622935350635,
+      16.01120322652924,
+      15.762361251261352
+    ],
+    "tsiolkovsky_rel": 1.7486012637846216e-13,
+    "terminal_velocity_rel": 8.704182929974991e-10,
+    "energy_drift_rel": 6.45274825548937e-15
+  },
+  "aero": {
+    "n_shots_table": 23,
+    "n_shots_cd0": 17,
+    "n_shots_cna_xcp": 13,
+    "cd0_mean_bias": -0.1455547206240058,
+    "cd0_worst_shot": 0.22931015321960235,
+    "cna_mean_bias": -0.10692505689300676,
+    "cna_worst_shot": 0.28963501764053423,
+    "xcp_mean_bias": 0.020221503471974524,
+    "xcp_worst_shot": 0.11442477807433815,
+    "cd0_worst_band": 0.1932233158726928,
+    "cna_worst_band": 0.19837770555748024,
+    "xcp_worst_band": 0.042032980331625724,
+    "tolerances": {
+      "cd0_band": 0.22,
+      "cd0_shot": 0.25,
+      "cna_band": 0.22,
+      "cna_shot": 0.3,
+      "xcp_band": 0.06,
+      "xcp_shot": 0.15
+    },
+    "bands": [
+      {
+        "lo": 1.4,
+        "hi": 2.0,
+        "n_all": 3,
+        "n_good": 3,
+        "cd0_err": -0.17937230861444475,
+        "cna_err": -0.10440293910364395,
+        "xcp_err": 0.042032980331625724
+      },
+      {
+        "lo": 2.0,
+        "hi": 2.6,
+        "n_all": 3,
+        "n_good": 1,
+        "cd0_err": -0.1932233158726928,
+        "cna_err": -0.08679587647966647,
+        "xcp_err": 0.03070564549392052
+      },
+      {
+        "lo": 2.6,
+        "hi": 3.2,
+        "n_all": 4,
+        "n_good": 3,
+        "cd0_err": -0.1717799663318471,
+        "cna_err": -0.010938473938689963,
+        "xcp_err": 0.0016441783674410182
+      },
+      {
+        "lo": 3.2,
+        "hi": 4.0,
+        "n_all": 5,
+        "n_good": 4,
+        "cd0_err": -0.11698054639037969,
+        "cna_err": -0.16728295364114298,
+        "xcp_err": 0.01946160473902836
+      },
+      {
+        "lo": 4.0,
+        "hi": 4.6,
+        "n_all": 2,
+        "n_good": 2,
+        "cd0_err": -0.06140677989940391,
+        "cna_err": -0.19837770555748024,
+        "xcp_err": 0.0077054270707452854
+      }
+    ],
+    "cd0_calibration": 1.171
+  },
+  "ntop": {
+    "rows": [
+      {
+        "quantity": "volume_total",
+        "ntop": 0.29063497019593376,
+        "closed_form": 0.2906885762512706,
+        "rel_err": -0.00018441060198559622
+      },
+      {
+        "quantity": "area_wetted_body",
+        "ntop": 3.523487230274886,
+        "closed_form": 3.5193858588838007,
+        "rel_err": 0.0011653656505814514
+      },
+      {
+        "quantity": "area_wetted_fins",
+        "ntop": 0.6191750373715168,
+        "closed_form": 0.56028,
+        "rel_err": 0.10511715101648611
+      },
+      {
+        "quantity": "area_base",
+        "ntop": 0.07068583470577035,
+        "closed_form": 0.07068583470577035,
+        "rel_err": 0.0
+      }
+    ],
+    "volume_structure": 0.01461675377333512,
+    "volume_cavity": 0.279384667818357,
+    "mass_structure": 41.07307810307159,
+    "billet_mass": 816.6842662505738,
+    "airframe_density": 2810.0,
+    "cg_structure": [
+      2.2846081430721954,
+      -0.0003254189101021593,
+      -9.171657138923627e-05
+    ],
+    "inertia_structure": [
+      46.145970461165845,
+      46.14520758746253,
+      1.585386567444194
+    ],
+    "wall_time_s": 36.239548499986995,
+    "fin_area_note": "The closed form counts two sides of each exposed panel only. The nTop plate has edges as well, so a positive error is expected."
+  },
+  "dive": {
+    "sweep": [
+      {
+        "gamma_deg": -25.0,
+        "impact_mach": 0.6732485351802484,
+        "range_km": 245.4257254420993,
+        "q_max_kPa": 148.84565806707317,
+        "burnout_kg": 203.05044256809384,
+        "converged": true
+      },
+      {
+        "gamma_deg": -35.0,
+        "impact_mach": 0.8017900898780073,
+        "range_km": 237.11533545718694,
+        "q_max_kPa": 148.84565806707317,
+        "burnout_kg": 203.05044256809384,
+        "converged": true
+      },
+      {
+        "gamma_deg": -50.0,
+        "impact_mach": 0.905024752424985,
+        "range_km": 230.50342056334844,
+        "q_max_kPa": 148.84565806707317,
+        "burnout_kg": 203.05044256809384,
+        "converged": true
+      },
+      {
+        "gamma_deg": -70.0,
+        "impact_mach": 0.9607752762574276,
+        "range_km": 225.50088422371593,
+        "q_max_kPa": 148.84565806707317,
+        "burnout_kg": 203.05044256809384,
+        "converged": true
+      },
+      {
+        "gamma_deg": -89.0,
+        "impact_mach": 0.9736001998084367,
+        "range_km": 222.1816022357954,
+        "q_max_kPa": 148.84565806707317,
+        "burnout_kg": 203.05044256809384,
+        "converged": true
+      }
+    ],
+    "burnout_kg": 203.05044256809384,
+    "self_consistent": {
+      "v_terminal": 318.2816042255742,
+      "mach": 0.9353136202709288,
+      "CD": 0.33355655219357083
+    },
+    "fixed_cd": [
+      {
+        "CD": 0.338,
+        "v_terminal": 316.1825707975203,
+        "mach": 0.9291453261295202
+      },
+      {
+        "CD": 0.45,
+        "v_terminal": 274.0248946911843,
+        "mach": 0.8052592826455841
+      },
+      {
+        "CD": 0.6,
+        "v_terminal": 237.31252007192114,
+        "mach": 0.6973749954043094
+      }
+    ],
+    "cd_needed_for_mach_1p50": 0.12968850245737615,
+    "v_required_for_mach_1p50": 510.44098577337957,
+    "q_at_mach_1p50_sea_level": 159586.87499999997,
+    "q_at_90kPa_mach": 1.126455211235932,
+    "sea_level_density": 1.2250000002007604,
+    "sea_level_sound_speed": 340.29399051558636,
+    "S_ref": 0.0962112750161874
+  },
+  "terminal_sweep": {
+    "rows": [
+      {
+        "m_p_terminal": 0.0,
+        "m_p_sustain": 212.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 237.11533545718694,
+        "mach_terminal": 0.8017900898780073,
+        "q_max_kPa": 148.84565806707317,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach"
+        ]
+      },
+      {
+        "m_p_terminal": 10.0,
+        "m_p_sustain": 202.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 216.26292054907165,
+        "mach_terminal": 1.1601540072867917,
+        "q_max_kPa": 148.84565806707317,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach"
+        ]
+      },
+      {
+        "m_p_terminal": 20.0,
+        "m_p_sustain": 192.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 208.03049890426564,
+        "mach_terminal": 1.3492194256030485,
+        "q_max_kPa": 148.84565806707317,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach"
+        ]
+      },
+      {
+        "m_p_terminal": 30.0,
+        "m_p_sustain": 182.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 199.64735482006674,
+        "mach_terminal": 1.5127022365452765,
+        "q_max_kPa": 162.3011325737922,
+        "feasible": true,
+        "violations": []
+      },
+      {
+        "m_p_terminal": 40.0,
+        "m_p_sustain": 172.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 191.3863480389046,
+        "mach_terminal": 1.6647989829975582,
+        "q_max_kPa": 196.57951363416413,
+        "feasible": true,
+        "violations": []
+      },
+      {
+        "m_p_terminal": 50.0,
+        "m_p_sustain": 162.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 183.09293612226708,
+        "mach_terminal": 1.8185916086479728,
+        "q_max_kPa": 234.57677870285153,
+        "feasible": false,
+        "violations": [
+          "R3 range",
+          "q_max"
+        ]
+      },
+      {
+        "m_p_terminal": 60.0,
+        "m_p_sustain": 152.0,
+        "m0_kg": 545.0504425680939,
+        "range_km": 174.6088207396639,
+        "mach_terminal": 2.02289058189977,
+        "q_max_kPa": 290.2414514928445,
+        "feasible": false,
+        "violations": [
+          "R3 range",
+          "q_max"
+        ]
+      }
+    ],
+    "range_slope_km_per_kg": -0.9660845138269261,
+    "propellant_pool_kg": 212.0
+  },
+  "motor": {
+    "cruise_drag_N": 1699.1738100237792,
+    "operating_point": {
+      "boost": {
+        "propellant_mass": 130.0,
+        "p_c": 7000000.0,
+        "p_e": 118082.66996806514,
+        "throat_area": 0.004024186823931038,
+        "throat_diameter": 0.07158040094628694,
+        "exit_area": 0.0321934945914483,
+        "exit_diameter": 0.20245994763668582,
+        "burning_area": 0.9647501708686606,
+        "Kn": 239.7379180140155,
+        "burn_rate": 0.010060779316601196,
+        "mdot": 17.4710494165732,
+        "burn_time": 7.440881019813314,
+        "thrust_vacuum": 48262.005839478494,
+        "thrust_sea_level": 44999.99999999999,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      },
+      "sustain": {
+        "propellant_mass": 172.0,
+        "p_c": 825339.0772661623,
+        "p_e": 13922.60598179538,
+        "throat_area": 0.0013497891463440635,
+        "throat_diameter": 0.04145606008992629,
+        "exit_area": 0.010798313170752508,
+        "exit_diameter": 0.1172554448434555,
+        "burning_area": 0.08972702777917808,
+        "Kn": 66.4748475880147,
+        "burn_rate": 0.004278045212334032,
+        "mdot": 0.6909413068938158,
+        "burn_time": 248.93576094507986,
+        "thrust_vacuum": 1908.6554329365993,
+        "thrust_sea_level": 814.5163509101014,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      },
+      "terminal": {
+        "propellant_mass": 40.0,
+        "p_c": 5903606.994852632,
+        "p_e": 99587.6680563349,
+        "throat_area": 0.0008598497064005495,
+        "throat_diameter": 0.033087681223048844,
+        "exit_area": 0.006878797651204396,
+        "exit_diameter": 0.09358609506622655,
+        "burning_area": 0.18611051714426372,
+        "Kn": 216.4454040734028,
+        "burn_rate": 0.009398085295652362,
+        "mdot": 3.148348526171571,
+        "burn_time": 12.705073681483565,
+        "thrust_vacuum": 8696.994172008286,
+        "thrust_sea_level": 8000.000000000001,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      }
+    },
+    "throat_transitions": [
+      {
+        "from": "boost",
+        "to": "sustain",
+        "area_from": 0.004024186823931038,
+        "area_to": 0.0013497891463440635,
+        "direction": "decrease",
+        "credible": false,
+        "mechanism": "no insert mechanism shrinks a throat; needs a separate smaller sustainer nozzle or a jettisoned tandem booster"
+      },
+      {
+        "from": "sustain",
+        "to": "terminal",
+        "area_from": 0.0013497891463440635,
+        "area_to": 0.0013497891463440635,
+        "direction": "unchanged",
+        "credible": true,
+        "mechanism": "no change needed"
+      }
+    ],
+    "separation_check": {
+      "boost": {
+        "p_e": 118082.66996806514,
+        "p_a_separation": 295206.6749201628,
+        "separation_altitude": 0.0
+      },
+      "sustain": {
+        "p_e": 13922.60598179538,
+        "p_a_separation": 34806.51495448845,
+        "separation_altitude": 8165.892331640198
+      },
+      "terminal": {
+        "p_e": 99587.6680563349,
+        "p_a_separation": 248969.17014083723,
+        "separation_altitude": 0.0
+      }
+    },
+    "inert": {
+      "case": 5.596642740313285,
+      "nozzle": 3.1394334461891638,
+      "insulation": 10.509948767848305,
+      "igniter": 1.71,
+      "total_physics": 20.956024954350752,
+      "case_thickness": 0.0012039999999999998,
+      "case_length": 2.602987840108585,
+      "correlation_min": 33.82417582417581,
+      "correlation_max": 85.49999999999999,
+      "mass_fraction_physics": 0.9422629092409021,
+      "recommended": 33.82417582417581
+    },
+    "grain": {
+      "length_total": 2.502987840108585,
+      "L_over_D": 7.405289467776879,
+      "bay_length_available": 2.3,
+      "volumetric_loading": 0.9206668012616815,
+      "feasible": false,
+      "warnings": [
+        "grain length 2.503 m exceeds the available motor bay 2.300 m by 0.203 m"
+      ]
+    },
+    "propellant_mass": 342.0,
+    "warnings": [
+      "sustain nozzle: exit pressure 13.9 kPa; the Summerfield criterion predicts flow separation below 8166 m altitude. Reported only, the thrust model does not change.",
+      "sustain chamber pressure 0.825 MPa is below 1 MPa; composite propellant combustion is normally unreliable there.",
+      "throat area decreases from boost (4024 mm^2) to sustain (1350 mm^2): no insert mechanism shrinks a throat; needs a separate smaller sustainer nozzle or a jettisoned tandem booster"
+    ]
+  },
+  "wall_time_s": 34.56548910000129
+}
