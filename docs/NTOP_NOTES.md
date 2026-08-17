@@ -624,3 +624,277 @@ therefore leaves `area_stations = 0` by default and lets the caller ask for it.
 `extract_section`'s optional "Min. Feature Size" is worth filling in (1.0e-3 m here). A section
 through a 12 mm fin plate is a thin sliver, and the default feature size is a plausible way to
 lose it.
+
+---
+
+# nTop notes - added by the IV-1 two-stage work package
+
+Everything below was measured by running `ntopcl` (nTop 5.53.2, installed build, this machine)
+while building `rocketgen/ntopgen/stack_notebook.py`, the two-stage IV-1 notebook. It extends the
+sections above and does not replace them. The probe that produced these numbers is kept at
+`runs/IV-1_geom/_probe.py`, which converts and runs ONE rung of the build ladder at a time and
+prints every measured value next to its closed form.
+
+## 25. `surface_area<implicit,real>` cost is set by the FIELD, not by the area
+
+Section 19 recorded 13 to 22 s per call and concluded that the block sets the cost floor. The
+two-stage notebook makes five such calls and shows WHY, because one of them is nearly free:
+
+| Body measured | Area | `surface_area` wall time |
+|---|---|---|
+| stage-2 revolved ogive-cylinder | 2.080 m^2 | 24.6 s |
+| stage-2 four-panel fin union | 0.283 m^2 | 24.2 s |
+| four-panel strake union | 0.425 m^2 | 23.8 s |
+| stage-1 four-panel fin union | 0.522 m^2 | 16.9 s |
+| **stage-1 `cylinder` primitive** | **2.642 m^2** | **0.27 s** |
+
+The booster has the LARGEST area of the five and costs ninety times less than the smallest. The
+difference is not the area and not the bounding box: it is what the signed-distance field is made
+of. A `cylinder<point,point,real>` primitive has a closed-form field. A `revolve` of a 27-point
+polygon, or a `boolean_union` of four `extrude`d profiles two of which are `mirror_body` results,
+does not, and the area integration pays for every field evaluation.
+
+Practical consequence, and it is actionable: **use a primitive whenever the shape is a
+primitive.** Building the booster as a revolved four-point polygon, for consistency with the
+payload stage, would have cost 25 s per run for nothing. It would also have been exact, so no
+accuracy test would ever have caught it. The same effect appears in `mass_properties`: 0.23 s on
+the booster cylinder against 3.8 s on the revolved stage-2 body.
+
+## 26. `cone<point,point,real,real>` removes a topology branch
+
+SPEC_IV1 asks for a conical interstage when the stage diameters differ and a cylindrical one when
+they match. Written as a branch, that would put a DIMENSION into the topology cache key, so the
+sizer would need a second `.ntop` the moment it equalised the diameters, and the
+convert-once-run-many pattern would quietly break.
+
+`cone` with `Radius 1 == Radius 2` IS a cylinder. One block covers both cases and the block graph
+no longer depends on any dimension. Measured on the default IV-1 interstage (R2 = 0.140 m,
+R1 = 0.200 m, L = 0.280 m): volume 0.02568578 m^3 against a closed-form
+`pi L (R2^2 + R2 R1 + R1^2) / 3 = 0.02568550` m^3, i.e. **+0.001 percent**. A `cone` is exact.
+
+Generalisation worth keeping: before writing a topology branch, check whether one block's
+degenerate case already covers both sides of it. A branch in the graph costs a whole extra
+`convert`.
+
+## 27. `offset_implicit` hollows a `cone` and a `cylinder` as well as a `revolve`
+
+Section 18 established the negative-offset trick on a revolved body. It works unchanged on the
+primitives, and it shrinks the FLAT ENDS too, which is what you want and is easy to forget:
+
+* on the booster `cylinder`, `offset_implicit(body, -t_wall)` gives a closed case with flat end
+  plates of thickness `t_wall` at BOTH ends. Measured cavity 0.2547456 m^3 against a closed-form
+  `pi (R - t)^2 (L - 2t) = 0.2547430` m^3, +0.001 percent;
+* on the interstage `cone`, `-t_interstage` gives a conical shell that keeps two annular end
+  rings. The measured shell volume is 1.59x the bare lateral-area-times-thickness value
+  (0.0012163 m^3 against 7.647e-4 m^3), and the excess is exactly those rings. A test that
+  asserted equality with the lateral estimate would FAIL on a correct model.
+
+## 28. Volume closure across four separate measurements is the strongest available check
+
+For each hollow stage the notebook measures four things with four different blocks: the outer
+mould line volume, the cavity volume, the structure volume, and the exposed plate volume. They
+must satisfy
+
+```
+cavity + structure  ==  outer mould line + (plate volume outside the outer mould line)
+```
+
+Measured on the default IV-1:
+
+| Stage | cavity + structure | OML + exposed plates | agreement |
+|---|---|---|---|
+| payload stage | 0.1317206 + 0.0083268 = 0.1400474 | 0.1374584 + 0.0026040 = 0.1400624 | 1.1e-4 |
+| booster | 0.2547456 + 0.0115681 = 0.2663137 | 0.2638892 + 0.0024007 = 0.2662899 | 8.9e-5 |
+
+Both close to about one part in ten thousand. This is a far better test than comparing any single
+number to closed form, because it cannot be satisfied by a body of the wrong shape: it links a
+boolean subtract, a negative offset, two unions and four independent adaptive integrations. It is
+the check that catches a bulkhead placed outside the void, a plate that failed to plug into the
+wall, or a cavity that leaked out through the base.
+
+## 29. A plate root must plug into the wall, and the reported area then includes the root patch
+
+Section 16's constant-thickness plate is right for a fin and even better for a strake, which
+really is a constant-thickness rib rather than an aerofoil. Two measured consequences:
+
+1. **Plug, do not touch.** Every plate root sits at radius `R - t_wall`, not at `R`. Tangential
+   contact of two implicit bodies is numerically fragile. The leading edge and chord are
+   extrapolated inboard along the same straight sweep and taper lines, so the chord at the true
+   surface `y = R` is still exact.
+2. **`boolean_subtract(plates, body)` leaves a root patch.** The exposed-plate area therefore
+   includes a curved strip of the BODY surface, `2 R asin(t / 2R)` wide by the chord long, which
+   is `t` times the chord to better than 0.01 percent. For a STRAKE that matters a lot, because a
+   strake is thick relative to its height. Measured against the closed form that includes it:
+
+   | Panel set | measured | solid closed form | error | zero-thickness reference | ratio |
+   |---|---|---|---|---|---|
+   | 4 strakes, 30 mm tall, 8 mm thick | 0.425257 m^2 | 0.427526 m^2 | -0.53 % | 0.336000 m^2 | 1.266 |
+   | 4 stage-2 fins | 0.282702 m^2 | 0.283219 m^2 | -0.18 % | 0.252000 m^2 | 1.122 |
+   | 4 stage-1 fins | 0.521842 m^2 | 0.522806 m^2 | -0.18 % | 0.480000 m^2 | 1.087 |
+
+   So a test that compared the measured strake area with `StrakeSpec.wetted_area` and demanded a
+   few percent would FAIL on a correct model, by 27 percent. The right reference is the solid, and
+   `stack_notebook.strake_solid_area` / `fin_solid_area` write it out. The measured number is also
+   the right one to hand to a skin-friction model, because friction acts on the real surface.
+
+   The measured plate VOLUMES confirm the plates independently: strakes 0.00134475 m^3 against
+   `n h L t = 0.00134400`, +0.06 percent.
+
+## 30. Namespacing one notebook's outputs across several bodies
+
+A notebook has exactly one output slot (section 1) and `driver.parse_outputs` flattens the JSON
+dictionary onto one `NtopMeasurements`. A notebook that measures THREE bodies cannot use that flat
+object: `s1_volume_total` and `s2_volume_total` both map onto `volume_total` and the second
+overwrites the first.
+
+What works, and is now in the repo:
+
+1. Prefix every emitted name by body: `s1_`, `s2_`, `is_`, `st_`. Register the prefixed names in
+   `driver.OUTPUT_NAME_MAP` anyway, so `ParsedOutputs.unmapped` stays honest about what the
+   notebook emitted.
+2. IGNORE `ParsedOutputs.measurements` entirely and split `ParsedOutputs.raw` by prefix.
+3. Fill one record per body with the new additive helper
+   `driver.measurements_from_names(values, target=...)`, which applies the same name table and the
+   same field casting as `parse_outputs`, so the two cannot drift apart.
+4. Carry the extra per-body quantities on a `NtopMeasurements` SUBCLASS
+   (`stack_notebook.StageMeasurements`), not by editing `config.py`. `register_output_names`
+   refuses a target that is not a field of `NtopMeasurements`, which turns out to be a useful
+   guard rail: it forces the subclass fields to be collected explicitly rather than
+   half-registered.
+
+Do not skip step 2. The flat object looks plausible and is wrong.
+
+## 31. `register_sources` catches a real defect between two notebooks
+
+The same guard rail exists on the SOURCES side, and it fired. `rocket_notebook.py` registers
+`relative_error` and `area_relative_error` with SV-1 timings in their text. Reusing those two key
+names in `stack_notebook.py` with IV-1 timings made a full-suite run abort at import with
+`ValueError: conflicting source for 'area_relative_error'`, because a full run imports both
+modules while a single-file run imports only one.
+
+That is the right behaviour and worth stating plainly: source keys are GLOBAL. Namespace them per
+vehicle (`iv1_relative_error`, `iv1_area_relative_error`). Had the check not existed, the
+engineering report would have printed SV-1's 19.9 s timing as the provenance of an IV-1 constant,
+and nobody would have noticed.
+
+## 32. Report a per-body reference station, and let Python do the frame change
+
+The geometry is built in ONE frame - the stack, nose tip at the origin - because building each
+stage in its own frame would double the notebook. But `masses_iv1.build_stack_masses` reads
+`cg_structure[0]` as a station from that stage's OWN forward face and adds the stage offset
+itself, so a stack-frame CG would be silently wrong by 2.98 m on the booster.
+
+The fix that keeps nTop as the authority: emit `sN_x_forward`, the stage's forward face in stack
+coordinates, as an ordinary `real` output alongside the CG, and subtract it in Python. It costs
+nothing, because the station is already a `real` in the graph, and the subtraction then uses
+nTop's own number rather than Python arithmetic on the design vector. Both frames are reported:
+`StageMeasurements.cg_structure` is stage-local and `.cg_structure_stack` is stack-frame.
+
+Measured on the default IV-1: booster structure CG at 4.213071 m in stack coordinates, forward
+face at 2.980000 m, so 1.233071 m from its own nose, which is 0.587 of its 2.100 m length. The
+off-axis components were 0.32 mm and 0.02 mm, consistent with the 1.2 mm section 20 measured on
+SV-1. Test against a tolerance, never against zero.
+
+## 33. Measured cost of the two-stage notebook, and how it grows
+
+Build ladder, one rung at a time, every export off. `convert` and one `-j` run, wall seconds:
+
+| `build_stage` | bodies present | convert | run |
+|---|---|---|---|
+| `s2_oml` | payload stage outer mould line | 18.3 | 14.7 |
+| `s2_plates` | + 4 strakes, 4 stage-2 fins | 42.2 | 42.2 |
+| `s2_hollow` | + cavity, 2 bulkheads, measured structure | 56.0 | 50.5 |
+| `booster` | + booster, 4 fins, cavity, structure | 73.9 | 76.3 |
+| `full` | + interstage shell | 98.5 | 117.8 |
+
+422 root entries, 287 KB of recipe JSON, 27 notebook inputs. The growth is not mysterious: each
+rung costs what its own `surface_area` and `mass_properties` blocks cost and nothing more, so the
+ladder is also a cost model. `convert` costs about the same as a run, as section 3 says it must.
+
+**There is a 2x SPREAD on repeats of an identical job, and it is not explained.** Five runs of the
+final notebook took 55.0, 78.6, 92.7, 114.7 and 117.8 s, and three converts of it took 62.6, 95.4
+and 96.5 s. It is not the block graph: the FASTEST convert was of the LARGER 422-block version,
+and the two 95-96 s converts were of the 414-block one. It is not the measured numbers, which are
+bit-stable across repeats. No cause is claimed here; the honest statement is that a single timing
+of this notebook is worth about a factor of two, so budget the upper end and never read a change
+of tens of percent between two runs as a regression. `tests/test_stack_notebook.py` therefore
+gates the wall time only at 8x the reference, which catches an export left on and nothing subtler.
+
+Adding an STL of the whole stack at a 5.0e-3 m mesh tolerance took `convert` from 98.5 s to about
+250 s and a run to 392 s, and produced a 12.4 MB, 247682-triangle STL. The stack bounding box is
+5.08 x 0.80 x 0.80 m = 3.25 m^3 against SV-1's 2.02 m^3, so the section 22 scaling holds:
+exports, not measurements, dominate a full run. That is why every export is off by default in
+`measure_stack`.
+
+## 34. Check the price of a measurement before assuming it is expensive
+
+Because `surface_area` on a primitive costs 0.27 s (section 25), it is worth measuring things you
+would otherwise leave out. The interstage's lateral wetted area was originally omitted from the
+stack total on cost grounds; on a `cone` it turned out to cost almost nothing, so the stack's
+`area_wetted_body` is now the complete sum of three MEASURED bodies instead of two measured plus
+one missing. On this block the price varies by two orders of magnitude with the field, not with
+the geometry's size.
+
+## 35. The build ladder found nothing wrong, which is itself the finding
+
+CLAUDE.md section 3.5 asks for small-scale validation first, so the notebook was built in five
+rungs and each rung was converted and run before the next was added. Every rung was correct on the
+first attempt, and the errors against closed form did not move as bodies were added: the stage-2
+volume error stayed at -0.008 percent from `s2_oml` through `full`, and its wetted-area error
+stayed at -0.302 percent.
+
+That is worth recording because it says where the risk actually is. The single-body work package
+lost hours to `loft` (section 16) and to the `implicit_2d` area block (section 24), both of which
+are BLOCK SEMANTICS problems. Adding more bodies to a notebook whose blocks are already understood
+is cheap and safe. The expensive unknowns are new block types, not new geometry.
+
+## 36. S(x) works across a four-body stack, and it sees the strakes
+
+Section 24's `extract_section` plus `body_surface_area<implicit_2d,real>[1.1.0]` chain carries over
+to the stacked union with no change, and it correctly crosses all four regions of the stack.
+Measured at 6 stations on the default IV-1, with `SECTION_FEATURE_SIZE = 1.0e-3` m:
+
+| x (m) | region | nTop S(x) (m^2) | closed-form bare body | excess |
+|---|---|---|---|---|
+| 0.423 | ogive nose | 0.027463 | 0.027464 | -0.000001 |
+| 1.270 | stage-2 cylinder + strakes | 0.062545 | 0.061575 | +0.000970 |
+| 2.117 | stage-2 cylinder + strakes | 0.062545 | 0.061575 | +0.000970 |
+| 2.963 | interstage cone | 0.121226 | 0.121216 | +0.000010 |
+| 3.810 | booster cylinder | 0.125674 | 0.125664 | +0.000010 |
+| 4.657 | booster cylinder | 0.125674 | 0.125664 | +0.000010 |
+
+The bare-body regions agree to 0.01 percent or better, INCLUDING the conical interstage, where the
+station has to hit the cone at the right local radius. And the two stations that land between the
+strake leading and trailing edges show an excess of 0.000970 m^2 against a predicted
+`n * height * thickness = 4 * 0.030 * 0.008 = 0.000960` m^2, i.e. +1.0 percent. So a 30 mm by 8 mm
+strake, which is a 0.24 cm^2 sliver, is resolved by the section block. That is a second,
+independent confirmation that the strakes are really in the solid.
+
+Cost: 6 stations gave a run of 75 s against a 55 to 118 s spread on the same notebook without
+them, so the added cost is well inside the timing noise of section 33 and
+the marginal cost per station is at most about 1 s, matching SV-1. It is still
+off by default, because the sizing loop calls the notebook tens of times and does not need it.
+
+## 37. The measured geometry found a real infeasibility in the default IV-1
+
+Not an nTop note as such, but it came out of the measurement and belongs with it. The default
+`config_iv1.default_iv1()` stack does NOT close on stage-2 internal volume:
+
+```
+propellant  150 kg / 1800 kg/m^3  = 0.083333 m^3
+payload      75 kg / 1500 kg/m^3  = 0.050000 m^3   (masses_iv1.RHO_PAYLOAD)
+                                    ----------
+                         needed     0.133333 m^3
+   nTop-measured stage-2 cavity     0.131721 m^3
+                                    ----------
+                      shortfall     0.001612 m^3, i.e. 1.2 percent
+```
+
+The stage-2 cavity cross-section is `pi (R - t_wall)^2 = pi * 0.1374^2 = 0.059309 m^2`, so the
+shortfall is 27 mm of stage-2 length. Lengthening stage 2 from 2.70 m to 2.73 m closes it and
+leaves the stacked length at 5.11 m against the A7 limit of 5.40 m; dropping 3 kg of propellant
+would also do it. `default_iv1()` says of itself "not sized; the sizer moves it", and this is
+exactly the constraint that tells it which way to move.
+
+`tests/test_stack_notebook.py::test_the_default_stack_is_NOT_volume_closed_on_stage_2` asserts the
+shortfall, so it cannot quietly disappear if the defaults change (CLAUDE.md sections 3.1 and 7).

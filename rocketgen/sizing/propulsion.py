@@ -586,6 +586,218 @@ class _PhaseDesign:
     kn: float
 
 
+#: Public alias. A "phase" of the SV-1 dual-thrust motor and a "stage" of the IV-1 stack are
+#: the same object at this fidelity: one propellant charge burning at one chamber pressure
+#: through one throat. `propulsion_iv1.py` builds these for its stages.
+PhaseDesign = _PhaseDesign
+
+
+# --------------------------------------------------------------------------------------
+#   Shared building blocks
+# --------------------------------------------------------------------------------------
+#
+# Everything below is used by `SolidMotor` AND by `propulsion_iv1.MultiStageMotor`. It lives
+# here, at module level, so the two motor models cannot drift apart: there is exactly one
+# implementation of the nozzle sizing, the mean-web grain closure, the ramp shape, the case
+# and nozzle mass estimates and the Summerfield check. If you change one of these you change
+# both motors, which is the intent. The expressions are lifted verbatim from the methods that
+# used to hold them, so the numbers are bit-identical to the validated SV-1 result.
+
+
+def ramp(t: float, t0: float, width: float) -> float:
+    """Linear 0 to 1 ramp starting at t0 over `width` seconds, clamped.
+
+    This is the only shape primitive in either motor model. Ignition rise, phase blend,
+    stage transition and tail-off are all built from it, which is what keeps the thrust
+    trace continuous for the RK4 integrator. See SOURCES["prop.ramp_times"].
+    """
+    if width <= 0.0:
+        return 1.0 if t >= t0 else 0.0
+    return min(1.0, max(0.0, (t - t0) / width))
+
+
+def throat_area_for_thrust(
+    thrust: float,
+    p_c: float,
+    C_F_vacuum: float,
+    area_ratio: float,
+    ambient_pressure: float,
+) -> float:
+    """Throat area that delivers `thrust` at `ambient_pressure` and `p_c`, m^2.
+
+    F = (C_F_vac - eps * p_a / p_c) * p_c * A_t, which is the momentum thrust plus the
+    ambient term (p_e - p_a) * A_e written in coefficient form. Setting
+    `ambient_pressure = 0` sizes the nozzle in vacuum; passing P_SEA_LEVEL sizes it at sea
+    level. Raises when the nozzle is so overexpanded at the sizing pressure that no throat
+    area can deliver a positive thrust.
+    """
+    c_f_sizing = C_F_vacuum - ambient_pressure * area_ratio / p_c
+    if c_f_sizing <= 0.0:
+        raise ValueError(
+            "nozzle is so overexpanded that the sizing thrust coefficient is not "
+            "positive; reduce eps_nozzle or raise p_c"
+        )
+    return thrust / (c_f_sizing * p_c)
+
+
+def design_phase(
+    name: str,
+    propellant_mass: float,
+    p_c: float,
+    throat_area: float,
+    area_ratio: float,
+    c_star: float,
+    C_F_vacuum: float,
+    density: float,
+) -> _PhaseDesign:
+    """Close one burning phase (or one stage) at a fixed chamber pressure and throat.
+
+    The closure is: choked mass flow from c*, burning area from the burn-rate law through
+    the Kn balance, burn time from the propellant mass, vacuum thrust from C_F. Every
+    quantity follows from the four inputs; nothing here is free.
+    """
+    exit_area = area_ratio * throat_area
+    r = burn_rate(p_c)
+    mdot = p_c * throat_area / c_star
+    burning_area = mdot / (density * r)
+    burn_time = propellant_mass / mdot if mdot > 0.0 else 0.0
+    thrust_vac = C_F_vacuum * p_c * throat_area
+    return _PhaseDesign(
+        name=name,
+        propellant_mass=propellant_mass,
+        p_c=p_c,
+        throat_area=throat_area,
+        exit_area=exit_area,
+        burning_area=burning_area,
+        burn_rate=r,
+        mdot=mdot,
+        burn_time=burn_time,
+        thrust_vacuum=thrust_vac,
+        C_F_vacuum=C_F_vacuum,
+        isp_vacuum=C_F_vacuum * c_star / G0,
+        kn=burning_area / throat_area,
+    )
+
+
+@dataclass
+class TubularGrain:
+    """Mean-web closure of one internal-burning tubular segment.
+
+    For a tube burning at its MEAN web position the closure is exact:
+        A_b = pi * L * (d_o + d_i) / 2,   V_p = A_b * w,   w = (d_o - d_i) / 2
+    so w = V_p / A_b and L = 2 * A_b / (pi * (d_o + d_i)). See
+    SOURCES["prop.neutral_burning"].
+
+    `fits` is False when the web is thicker than the bay radius, that is when the segment
+    needs more propellant than a tube of this burning area can hold. `d_inner` is then
+    clamped to a positive sliver so the length stays finite and the caller can report the
+    overrun instead of dividing by zero.
+    """
+
+    volume: float
+    web: float
+    d_inner: float
+    length: float
+    fits: bool
+
+
+def tubular_grain_closure(
+    propellant_mass: float, density: float, burning_area: float, d_outer: float
+) -> TubularGrain:
+    """Close an internal-burning tubular segment inside a bay of diameter `d_outer`."""
+    volume = propellant_mass / density
+    web = volume / burning_area
+    d_inner = d_outer - 2.0 * web
+    fits = d_inner > 0.0
+    if not fits:
+        d_inner = 1.0e-6
+    length = 2.0 * burning_area / (math.pi * (d_outer + d_inner))
+    return TubularGrain(
+        volume=volume, web=web, d_inner=d_inner, length=length, fits=fits
+    )
+
+
+def motor_case_and_insulation(
+    case_inner_radius: float,
+    case_length: float,
+    p_design: float,
+    case_material: Material,
+    insulation_material: Material,
+    insulation_thickness: float,
+) -> dict[str, float]:
+    """Case and insulation mass from thin-wall hoop stress, kg.
+
+    t_cyl = p_design * r / sigma_yield, floored at the minimum practical gauge. The two
+    closures are membrane spheres, so they carry p*r/(2t) and are half as thick. Insulation
+    is a constant-thickness liner over the same wetted area. `p_design` must already carry
+    the safety factor: pass CASE_SAFETY_FACTOR * max(p_c over all phases or stages), so the
+    case pays for the highest pressure it ever contains.
+    """
+    t_cyl = max(CASE_MIN_GAUGE_M, p_design * case_inner_radius / case_material.sigma_yield)
+    t_dome = 0.5 * t_cyl   # membrane sphere stress is p*r/(2t)
+
+    area_cyl = 2.0 * math.pi * case_inner_radius * case_length
+    area_domes = 2.0 * (2.0 * math.pi * case_inner_radius ** 2)
+    m_case = case_material.density * (area_cyl * t_cyl + area_domes * t_dome)
+    m_insulation = insulation_material.density * (
+        (area_cyl + area_domes) * insulation_thickness
+    )
+    return {
+        "case": m_case,
+        "insulation": m_insulation,
+        "case_thickness": t_cyl,
+        "dome_thickness": t_dome,
+        "area_cyl": area_cyl,
+        "area_domes": area_domes,
+    }
+
+
+def conical_nozzle_mass(throat_area: float, exit_area: float) -> float:
+    """Geometric conical-nozzle mass estimate, kg. See SOURCES['prop.nozzle_mass_model'].
+
+    This is the weakest number in either inert-mass model. It is a lateral shell area times
+    a wall thickness times a structure factor, and it is known to be optimistic.
+    """
+    r_t = math.sqrt(throat_area / math.pi)
+    r_e = math.sqrt(exit_area / math.pi)
+    axial = (r_e - r_t) / math.tan(NOZZLE_HALF_ANGLE_RAD)
+    slant = math.hypot(axial, r_e - r_t)
+    lateral = math.pi * (r_t + r_e) * slant
+    return (
+        NOZZLE_MATERIAL_DENSITY * lateral * NOZZLE_WALL_THICKNESS_M * NOZZLE_STRUCTURE_FACTOR
+    )
+
+
+def correlation_inert_band(propellant_mass: float) -> tuple[float, float]:
+    """Inert mass implied by the tactical-motor propellant-mass-fraction band, kg.
+
+    zeta = m_p / (m_p + inert) so inert = m_p * (1 - zeta) / zeta. Returns
+    (optimistic, pessimistic) = (from the high zeta, from the low zeta). See
+    SOURCES["prop.motor_mass_fraction"]: the band endpoints are a quoted correlation, not a
+    measurement, and the band exists to bound the bottom-up sum, never to replace it
+    silently.
+    """
+    zeta_lo, zeta_hi = MOTOR_MASS_FRACTION_BAND
+    inert_from_zeta_hi = propellant_mass * (1.0 - zeta_hi) / zeta_hi   # optimistic bound
+    inert_from_zeta_lo = propellant_mass * (1.0 - zeta_lo) / zeta_lo   # pessimistic bound
+    return inert_from_zeta_hi, inert_from_zeta_lo
+
+
+def summerfield_separation(p_e: float) -> dict[str, float]:
+    """Summerfield flow-separation assessment for one nozzle.
+
+    Returns the exit static pressure, the ambient pressure at which separation starts
+    (p_e / 0.40) and the altitude below which the flow would separate. Separation is
+    reported, never applied to the thrust. See SOURCES["prop.separation_criterion"].
+    """
+    p_a_sep = p_e / SEPARATION_PE_OVER_PA
+    return {
+        "p_e": p_e,
+        "p_a_separation": p_a_sep,
+        "separation_altitude": _altitude_for_pressure(p_a_sep),
+    }
+
+
 class SolidMotor:
     """Boost-sustain solid rocket motor for the SV-1 demo rocket.
 
@@ -640,13 +852,13 @@ class SolidMotor:
 
         # --- boost: chamber pressure fixed by the design vector, throat from thrust ---
         p_c_boost = dv.p_c
-        c_f_sizing = self.C_F_vacuum - sizing_ambient_pressure * self.area_ratio / p_c_boost
-        if c_f_sizing <= 0.0:
-            raise ValueError(
-                "nozzle is so overexpanded that the sizing thrust coefficient is not "
-                "positive; reduce eps_nozzle or raise p_c"
-            )
-        throat_area_boost = dv.F_boost / (c_f_sizing * p_c_boost)
+        throat_area_boost = throat_area_for_thrust(
+            dv.F_boost,
+            p_c_boost,
+            self.C_F_vacuum,
+            self.area_ratio,
+            sizing_ambient_pressure,
+        )
         self._boost = self._make_phase(
             "boost", dv.m_p_boost, p_c_boost, throat_area_boost
         )
@@ -672,27 +884,16 @@ class SolidMotor:
     def _make_phase(
         self, name: str, propellant_mass: float, p_c: float, throat_area: float
     ) -> _PhaseDesign:
-        rho = self.propellant.density
-        exit_area = self.area_ratio * throat_area
-        r = burn_rate(p_c)
-        mdot = p_c * throat_area / self.c_star
-        burning_area = mdot / (rho * r)
-        burn_time = propellant_mass / mdot if mdot > 0.0 else 0.0
-        thrust_vac = self.C_F_vacuum * p_c * throat_area
-        return _PhaseDesign(
-            name=name,
-            propellant_mass=propellant_mass,
-            p_c=p_c,
-            throat_area=throat_area,
-            exit_area=exit_area,
-            burning_area=burning_area,
-            burn_rate=r,
-            mdot=mdot,
-            burn_time=burn_time,
-            thrust_vacuum=thrust_vac,
+        """One burning phase, closed by the shared `design_phase` free function."""
+        return design_phase(
+            name,
+            propellant_mass,
+            p_c,
+            throat_area,
+            area_ratio=self.area_ratio,
+            c_star=self.c_star,
             C_F_vacuum=self.C_F_vacuum,
-            isp_vacuum=self.C_F_vacuum * self.c_star / G0,
-            kn=burning_area / throat_area,
+            density=self.propellant.density,
         )
 
     def _size_sustain_at_pressure(self, p_c: float) -> _PhaseDesign:
@@ -776,13 +977,7 @@ class SolidMotor:
         if self.has_terminal:
             phases.append(self._terminal)
         for phase in phases:
-            p_e = self.pe_over_pc * phase.p_c
-            p_a_sep = p_e / SEPARATION_PE_OVER_PA
-            out[phase.name] = {
-                "p_e": p_e,
-                "p_a_separation": p_a_sep,
-                "separation_altitude": _altitude_for_pressure(p_a_sep),
-            }
+            out[phase.name] = summerfield_separation(self.pe_over_pc * phase.p_c)
         return out
 
     @property
@@ -855,11 +1050,15 @@ class SolidMotor:
         feasible = True
 
         # --- boost: internal-burning tube ---
-        v_boost = self._boost.propellant_mass / rho
         a_boost = self._boost.burning_area
-        web_boost = v_boost / a_boost
-        d_i_boost = d_o - 2.0 * web_boost
-        if d_i_boost <= 0.0:
+        tube_boost = tubular_grain_closure(
+            self._boost.propellant_mass, rho, a_boost, d_o
+        )
+        v_boost = tube_boost.volume
+        web_boost = tube_boost.web
+        d_i_boost = tube_boost.d_inner
+        length_boost = tube_boost.length
+        if not tube_boost.fits:
             feasible = False
             warnings.append(
                 f"boost web {web_boost * 1e3:.0f} mm exceeds the bay radius "
@@ -867,8 +1066,6 @@ class SolidMotor:
                 f"{self._boost.propellant_mass:.0f} kg at a burning area of "
                 f"{a_boost:.3f} m^2"
             )
-            d_i_boost = 1.0e-6
-        length_boost = 2.0 * a_boost / (math.pi * (d_o + d_i_boost))
 
         # --- sustain: end burner ---
         v_sustain = self._sustain.propellant_mass / rho
@@ -886,11 +1083,15 @@ class SolidMotor:
 
         # --- terminal: internal-burning tube, same closure as the boost segment ---
         if self.has_terminal:
-            v_terminal = self._terminal.propellant_mass / rho
             a_terminal = self._terminal.burning_area
-            web_terminal = v_terminal / a_terminal
-            d_i_terminal = d_o - 2.0 * web_terminal
-            if d_i_terminal <= 0.0:
+            tube_terminal = tubular_grain_closure(
+                self._terminal.propellant_mass, rho, a_terminal, d_o
+            )
+            v_terminal = tube_terminal.volume
+            web_terminal = tube_terminal.web
+            d_i_terminal = tube_terminal.d_inner
+            length_terminal = tube_terminal.length
+            if not tube_terminal.fits:
                 feasible = False
                 warnings.append(
                     f"terminal web {web_terminal * 1e3:.0f} mm exceeds the bay radius "
@@ -899,8 +1100,6 @@ class SolidMotor:
                     f"{a_terminal:.3f} m^2. Either raise the terminal thrust (which "
                     "raises the burning area) or reduce m_p_terminal"
                 )
-                d_i_terminal = 1.0e-6
-            length_terminal = 2.0 * a_terminal / (math.pi * (d_o + d_i_terminal))
         else:
             v_terminal = 0.0
             a_terminal = 0.0
@@ -1008,12 +1207,14 @@ class SolidMotor:
 
     # ------------------------------------------------------------------- thrust ---
 
-    @staticmethod
-    def _ramp(t: float, t0: float, width: float) -> float:
-        """Linear 0 to 1 ramp starting at t0 over `width` seconds, clamped."""
-        if width <= 0.0:
-            return 1.0 if t >= t0 else 0.0
-        return min(1.0, max(0.0, (t - t0) / width))
+    # Linear 0 to 1 ramp: bound DIRECTLY to the shared `ramp` free function, not wrapped in a
+    # forwarding method. `_shapes` calls it six times per thrust evaluation and a mission calls
+    # `thrust` tens of thousands of times, so an extra Python frame here is not free: a
+    # forwarding wrapper measured about 7 percent slower on `SolidMotor.thrust`, against the
+    # 2 s wall-clock budget in tests/test_trajectory.py. Binding the alias keeps exactly the
+    # frame count of the inlined staticmethod this replaced, so the refactor is
+    # performance-neutral for SV-1 by construction rather than by luck.
+    _ramp = staticmethod(ramp)
 
     def _shapes(self, t: float) -> tuple[float, float, float]:
         """Normalised boost, sustain and terminal mass-flow shapes at motor time t.
@@ -1333,29 +1534,25 @@ class SolidMotor:
         if self.has_terminal:
             peak_pressures.append(self._terminal.p_c)
         p_design = CASE_SAFETY_FACTOR * max(peak_pressures)
-        t_cyl = max(
-            CASE_MIN_GAUGE_M, p_design * case_inner_radius / self.case_material.sigma_yield
-        )
-        t_dome = 0.5 * t_cyl   # membrane sphere stress is p*r/(2t)
-
         case_length = geom.length_total + CASE_LENGTH_ALLOWANCE_M
-        area_cyl = 2.0 * math.pi * case_inner_radius * case_length
-        area_domes = 2.0 * (2.0 * math.pi * case_inner_radius ** 2)
-        m_case = self.case_material.density * (area_cyl * t_cyl + area_domes * t_dome)
-
-        m_insulation = self.insulation_material.density * (
-            (area_cyl + area_domes) * self.insulation_thickness
+        shell = motor_case_and_insulation(
+            case_inner_radius,
+            case_length,
+            p_design,
+            self.case_material,
+            self.insulation_material,
+            self.insulation_thickness,
         )
+        t_cyl = shell["case_thickness"]
+        m_case = shell["case"]
+        m_insulation = shell["insulation"]
 
         m_nozzle = self._nozzle_mass()
         m_igniter = IGNITER_MASS_FRACTION * self.propellant_mass
 
         physics_total = m_case + m_insulation + m_nozzle + m_igniter
         m_p = self.propellant_mass
-        zeta_lo, zeta_hi = MOTOR_MASS_FRACTION_BAND
-        # zeta = m_p / (m_p + inert)  ->  inert = m_p * (1 - zeta) / zeta
-        inert_from_zeta_hi = m_p * (1.0 - zeta_hi) / zeta_hi   # optimistic bound
-        inert_from_zeta_lo = m_p * (1.0 - zeta_lo) / zeta_lo   # pessimistic bound
+        inert_from_zeta_hi, inert_from_zeta_lo = correlation_inert_band(m_p)
 
         return {
             "case": m_case,
@@ -1378,17 +1575,7 @@ class SolidMotor:
         """
         total = 0.0
         for phase in (self._boost, self._sustain):
-            r_t = math.sqrt(phase.throat_area / math.pi)
-            r_e = math.sqrt(phase.exit_area / math.pi)
-            axial = (r_e - r_t) / math.tan(NOZZLE_HALF_ANGLE_RAD)
-            slant = math.hypot(axial, r_e - r_t)
-            lateral = math.pi * (r_t + r_e) * slant
-            total += (
-                NOZZLE_MATERIAL_DENSITY
-                * lateral
-                * NOZZLE_WALL_THICKNESS_M
-                * NOZZLE_STRUCTURE_FACTOR
-            )
+            total += conical_nozzle_mass(phase.throat_area, phase.exit_area)
             if not self.two_position_throat:
                 break   # one throat, one nozzle
         return total

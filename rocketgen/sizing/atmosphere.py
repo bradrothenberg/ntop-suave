@@ -60,8 +60,26 @@ SUTHERLAND_T0: float = 273.15
 SUTHERLAND_MU0: float = 1.716e-5
 
 H_MIN: float = 0.0
-H_MAX: float = 30_000.0
+
+# Table ceiling.
+#
+# This was 30 km, which was ample for the SV-1 cruise-and-dive mission. It is NOT ample for a
+# lofted two-stage intercept: measured IV-1 arcs apogee between 45 and 54 km. Above the ceiling
+# `atmo()` clamps, which holds density at its ceiling value and therefore OVERSTATES drag on
+# everything above it. The ceiling is now 86 km, which is the upper limit of the US Standard 1976
+# lower atmosphere and of SUAVE's implementation of it.
+#
+# SUAVE takes GEOMETRIC altitude and converts internally to geopotential, which is the convention
+# the standard's tables are printed in. That distinction matters above about 30 km: at 47 km
+# geometric the geopotential altitude is 46.655 km, and evaluating the standard there gives
+# 115.8 Pa, which is what SUAVE returns. Comparing SUAVE against the printed 47 km row instead
+# looks like a 4 percent error and is not one. `tests/test_atmosphere_high.py` does the conversion
+# properly and pins the agreement.
+H_MAX: float = 86_000.0
 H_STEP: float = 10.0
+
+#: The old ceiling, kept so a test can prove the extension did not disturb the region below it.
+H_MAX_LEGACY: float = 30_000.0
 
 _FIELDS = ("pressure", "temperature", "density", "speed_of_sound", "dynamic_viscosity")
 
@@ -132,21 +150,49 @@ def prime() -> None:
 def atmo(h: float | np.ndarray) -> AtmoState:
     """Atmospheric state at geometric altitude `h` in metres.
 
-    Vectorised: `h` may be a scalar or any array-like. Altitudes outside 0 to 30 km are
+    Vectorised: `h` may be a scalar or any array-like. Altitudes outside `H_MIN` to `H_MAX` are
     clamped to the table ends, which is deliberate. The sizing loop must never silently
     extrapolate the atmosphere, and the trajectory integrator can overshoot by a metre at a
     segment boundary. Clamping keeps that harmless; use `is_in_range` to test explicitly.
+
+    The grid is uniform with a constant `H_STEP`, so the bracketing index is computed by
+    arithmetic rather than by search. `np.interp` would binary-search the whole array on every
+    field of every call, which cost real time once the ceiling went from 30 km to 86 km and the
+    grid grew to 8601 points. Index arithmetic is O(1) in the table size and gives bit-identical
+    results on a uniform grid, so this is a pure speed-up, not an approximation. There is a test
+    that pins the agreement against `np.interp`.
     """
     t = table()
     scalar = np.isscalar(h) or (isinstance(h, np.ndarray) and h.ndim == 0)
-    hq = np.asarray(h, dtype=float)
-    grid = t["altitude"]
 
-    out = []
+    if scalar:
+        x = (float(h) - H_MIN) / H_STEP
+        n = t["altitude"].size
+        if x <= 0.0:
+            i, f = 0, 0.0
+        elif x >= n - 1:
+            i, f = n - 2, 1.0
+        else:
+            i = int(x)
+            f = x - i
+        out: list[Any] = []
+        for name in _FIELDS:
+            col = t[name]
+            a = col[i]
+            out.append(float(a + f * (col[i + 1] - a)))
+        return AtmoState(*out)
+
+    hq = np.asarray(h, dtype=float)
+    x = (hq - H_MIN) / H_STEP
+    n = t["altitude"].size
+    idx = np.clip(np.floor(x).astype(np.intp), 0, n - 2)
+    frac = np.clip(x - idx, 0.0, 1.0)
+    arr_out: list[Any] = []
     for name in _FIELDS:
-        v = np.interp(hq, grid, t[name])
-        out.append(float(v) if scalar else v)
-    return AtmoState(*out)
+        col = t[name]
+        a = col[idx]
+        arr_out.append(a + frac * (col[idx + 1] - a))
+    return AtmoState(*arr_out)
 
 
 def is_in_range(h: float | np.ndarray) -> bool | np.ndarray:

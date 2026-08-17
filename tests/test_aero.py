@@ -253,10 +253,15 @@ def test_atmosphere_is_fast_enough_for_the_integrator():
 
 
 def test_is_in_range():
+    # The ceiling was raised from 30 km to 86 km so that a lofted two-stage intercept arc is
+    # interpolated rather than clamped. This test used to assert 30_001.0 was out of range; that
+    # was pinning the old ceiling, not a property worth keeping. It now checks the boundary
+    # wherever the boundary actually is.
     assert atm.is_in_range(0.0)
     assert atm.is_in_range(30_000.0)
+    assert atm.is_in_range(atm.H_MAX)
     assert not atm.is_in_range(-1.0)
-    assert not atm.is_in_range(30_001.0)
+    assert not atm.is_in_range(atm.H_MAX + 1.0)
 
 
 # ======================================================================================

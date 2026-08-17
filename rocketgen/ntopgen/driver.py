@@ -35,6 +35,7 @@ __all__ = [
     "INPUT_TEMPLATE_NAME",
     "OUTPUT_TEMPLATE_NAME",
     "register_output_names",
+    "measurements_from_names",
 ]
 
 log = logging.getLogger(__name__)
@@ -206,6 +207,41 @@ def register_output_names(mapping: Mapping[str, str]) -> None:
                 f"remap it to {target!r}"
             )
         OUTPUT_NAME_MAP[name] = target
+
+
+def measurements_from_names(
+    values: Mapping[str, Any],
+    target: NtopMeasurements | None = None,
+    extra_map: Mapping[str, str] | None = None,
+) -> NtopMeasurements:
+    """Map an ALREADY-DECODED `{output name: value}` dictionary onto an `NtopMeasurements`.
+
+    `parse_outputs` does this for a whole output-JSON file and returns one flat object. That is
+    the right shape for a notebook that measures one body. A notebook that measures SEVERAL
+    bodies has to namespace its output names per body (for example `s1_volume_total` and
+    `s2_volume_total`), which means a single flat object cannot hold the result: both names map
+    onto the same `volume_total` field and the second would overwrite the first.
+
+    So this helper exists to fill ONE body's record from a sub-dictionary the caller has already
+    separated out. It uses the same `OUTPUT_NAME_MAP` table and the same field casting as
+    `parse_outputs`, so the two cannot drift apart.
+
+    `target` may be an instance of a SUBCLASS of `NtopMeasurements` carrying extra fields; it is
+    filled in place and returned. Names that do not map to a field of `NtopMeasurements` are
+    ignored here, because the subclass owns them and knows their types.
+
+    Used by `ntopgen/stack_notebook.py`. `rocketgen/config.py` is never edited for this.
+    """
+    m = target if target is not None else NtopMeasurements()
+    table = {_fold(k): v for k, v in OUTPUT_NAME_MAP.items()}
+    table.update({_fold(k): v for k, v in (extra_map or {}).items()})
+    fields = set(NtopMeasurements.__dataclass_fields__)
+    for name, value in values.items():
+        field_name = table.get(_fold(str(name)))
+        if field_name is None or field_name not in fields:
+            continue
+        setattr(m, field_name, _cast_for_field(field_name, value))
+    return m
 
 
 def _fold(name: str) -> str:
