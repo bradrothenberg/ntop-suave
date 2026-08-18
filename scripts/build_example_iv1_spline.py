@@ -179,15 +179,15 @@ def verify_scrub(root: str) -> int:
     text-only check would skip. An earlier version of this function skipped every extension it
     did not recognise, which meant the notebook was never checked at all.
 
-    NEVER trust the copy step's own success message (CLAUDE.md section 6).
-    """
     The needles are MACHINE-IDENTIFYING TOKENS, not path punctuation. A drive-letter pattern
-    like "D:/" fires constantly on packed float data - "Y@L:/>Q", "6@c:/>" are real hits from a
-    real .ntop - and a scanner that cries wolf on every binary is a scanner nobody reads. These
-    tokens cannot occur by chance.
+    like "D:/" fires constantly on packed float data - "Y@L:/>Q" and "6@c:/>" are real hits
+    from a real .ntop - and a scanner that cries wolf on every binary is a scanner nobody
+    reads. These tokens cannot occur by chance.
 
     A relative "runs/_ntop_cache/..." is deliberately NOT a needle: it points inside the repo
     and names no machine.
+
+    NEVER trust the copy step's own success message (CLAUDE.md section 6).
     """
     bad = 0
     needles = (b"nTop_Suave", b"bradrothenberg", b"cplusplus", b"worktrees",
