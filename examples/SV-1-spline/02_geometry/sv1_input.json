@@ -1,0 +1,203 @@
+{
+  "inputs": [
+    {
+      "name": "Body Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.35
+    },
+    {
+      "name": "Overall Length",
+      "type": "real",
+      "units": "m",
+      "value": 3.6
+    },
+    {
+      "name": "Nose Fineness",
+      "type": "real",
+      "value": 3.4
+    },
+    {
+      "name": "Wall Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.003
+    },
+    {
+      "name": "Boattail Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.2
+    },
+    {
+      "name": "Base Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.3
+    },
+    {
+      "name": "Fin Semi Span",
+      "type": "real",
+      "units": "m",
+      "value": 0.23
+    },
+    {
+      "name": "Fin Root Chord",
+      "type": "real",
+      "units": "m",
+      "value": 0.34
+    },
+    {
+      "name": "Fin Taper Ratio",
+      "type": "real",
+      "value": 0.45
+    },
+    {
+      "name": "Fin Sweep",
+      "type": "real",
+      "units": "rad",
+      "value": 0.7853981633974483
+    },
+    {
+      "name": "Fin Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.012
+    },
+    {
+      "name": "Fin TE Gap",
+      "type": "real",
+      "units": "m",
+      "value": 0.08
+    },
+    {
+      "name": "Seeker Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.3
+    },
+    {
+      "name": "Guidance Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.25
+    },
+    {
+      "name": "Warhead Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.55
+    },
+    {
+      "name": "Nose Shape c0",
+      "type": "real",
+      "value": 0.0
+    },
+    {
+      "name": "Nose Shape c1",
+      "type": "real",
+      "value": 0.1478044477885235
+    },
+    {
+      "name": "Nose Shape c2",
+      "type": "real",
+      "value": 0.33269842365147884
+    },
+    {
+      "name": "Nose Shape c3",
+      "type": "real",
+      "value": 0.5548257182701335
+    },
+    {
+      "name": "Nose Shape c4",
+      "type": "real",
+      "value": 0.7287504951931848
+    },
+    {
+      "name": "Nose Shape c5",
+      "type": "real",
+      "value": 0.8659261633795277
+    },
+    {
+      "name": "Nose Shape c6",
+      "type": "real",
+      "value": 0.9600339207045834
+    },
+    {
+      "name": "Nose Shape c7",
+      "type": "real",
+      "value": 1.0
+    },
+    {
+      "name": "Nose Shape c8",
+      "type": "real",
+      "value": 1.0
+    },
+    {
+      "name": "Boattail Shape c0",
+      "type": "real",
+      "value": 0.0
+    },
+    {
+      "name": "Boattail Shape c1",
+      "type": "real",
+      "value": 0.036111111111111184
+    },
+    {
+      "name": "Boattail Shape c2",
+      "type": "real",
+      "value": 0.1277777777777776
+    },
+    {
+      "name": "Boattail Shape c3",
+      "type": "real",
+      "value": 0.3041666666666668
+    },
+    {
+      "name": "Boattail Shape c4",
+      "type": "real",
+      "value": 0.4999999999999989
+    },
+    {
+      "name": "Boattail Shape c5",
+      "type": "real",
+      "value": 0.6958333333333351
+    },
+    {
+      "name": "Boattail Shape c6",
+      "type": "real",
+      "value": 0.8722222222222203
+    },
+    {
+      "name": "Boattail Shape c7",
+      "type": "real",
+      "value": 0.9638888888888897
+    },
+    {
+      "name": "Boattail Shape c8",
+      "type": "real",
+      "value": 1.0
+    },
+    {
+      "name": "Mesh Tolerance",
+      "type": "real",
+      "units": "m",
+      "value": 0.005
+    },
+    {
+      "name": "STL Path",
+      "type": "file_path",
+      "value": "runs/SV-1_spline/converged/geom/sv1.stl"
+    },
+    {
+      "name": "STEP Path",
+      "type": "file_path",
+      "value": "runs/SV-1_spline/converged/geom/sv1.step"
+    },
+    {
+      "name": "Implicit Path",
+      "type": "file_path",
+      "value": "runs/SV-1_spline/converged/geom/sv1.implicit"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+requirement,value,limit,met
+A2 slant range [m],160934.00000000076,160934.0,True
+A3 intercept alt [m],24392.16172221725,15000.0,True
+A4 intercept Mach,4.057091238098782,3.0,True
+A6 max diameter [m],0.42,0.42,True
+A7 stacked length [m],5.28,5.4,True
+A8 launch mass [kg],591.0501737491961,1400.0,True
+A10 q_max [Pa],307939.47282396955,350000.0,True
+A11 lateral g,15.864867255787884,15.0,True
+A12 s1 burnout alt [m],4683.343359854302,20000.0,True
+grain L/D stage 1,2.6078629305238867,8.0,True
+grain L/D stage 2,1.7970503789700736,8.0,True
+stage 1 vol loading,0.37467260080728704,1.0,True
+stage 2 vol loading,0.8922212645613128,1.0,True
+stage 1 grain closes,1.0,1.0,True
+stage 2 grain closes,1.0,1.0,True
