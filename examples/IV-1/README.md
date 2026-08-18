@@ -21,10 +21,11 @@ requirements audit, which is the most useful thing in this example.
 | Lateral acceleration available | 15.86 g | >= 15 g |
 | Launch mass | **592.2 kg** | <= 1400 kg |
 | Stacked length / max diameter | 5.28 m / 0.42 m | <= 5.40 m / 0.42 m |
-| Peak dynamic pressure | 311 kPa | <= 350 kPa |
+| Peak dynamic pressure | 304.6 kPa | <= 350 kPa |
 | Grain closure, both stages | 0.37 / 0.89 loading | <= 1.0 |
+| Static margin (A9) | **NOT evaluated by the loop; fails when evaluated** | >= 1.0 cal |
 
-All sixteen constraints met. 0.42 m booster, 0.34 m payload stage, 220 + 90 kg propellant,
+All fifteen recorded constraints met. 0.42 m booster, 0.34 m payload stage, 220 + 90 kg propellant,
 31.3 kg jettisoned at separation, four strakes, conical interstage, 38 kN divert motor.
 
 ## The nTop coupling
@@ -88,3 +89,29 @@ Four requirements defects, all found by running the constraint set rather than b
 ```
 
 Add nothing for the analytic-geometry run. One nTop measurement call takes 55 to 118 s.
+
+
+## Two open items, found while writing the report
+
+Both are stated in section 6 of the report. Neither is resolved.
+
+**1. A9 static margin is not evaluated by the sizing loop, and it fails when it is.** The recorded
+constraint list has fifteen entries and A9 is not among them, so "all constraints met" means all
+fifteen that were checked. Evaluating A9 over four flight configurations and three Mach numbers
+gives a worst case of **-0.947 calibres** on the payload stage after separation, against a
+requirement of >= 1.0. The stack at stage-1 burnout is stable at +1.30 to +1.86 calibres; launch
+and post-separation are not. Caveats: the divert pack carries no longitudinal station so it sits
+outside the centre-of-gravity calculation, and the centre of pressure is a linear build-up at one
+angle of attack. So this is an open item, not a verdict. It means the constraint list has two
+holes, not one, and the second is still open.
+
+**2. The CD0 calibration is not applied to IV-1.** `scripts/iv1_converge.py` builds `StackAero`
+directly and never wraps it in `loop.CalibratedAero`, so the 1.171 factor validated against the
+Basic Finner free-flight data is absent. IV-1 therefore flies on uncorrected drag. The uncorrected
+build-up runs about 15 percent low, and low drag overpredicts range, so **the 100 mile result is
+optimistic by an amount that has not been quantified.** SV-1 does apply the correction.
+
+## Correction to earlier figures in this file
+
+Peak dynamic pressure is 304.577 kPa at 4.61 km and Mach 2.77, not 311 kPa. The stacked STL is at
+`geometry/iv1.stl`, not at the top level. Both were wrong in the first version of this index.
