@@ -52,8 +52,13 @@ excess at the strake stations.
 
 | File | What it is |
 |---|---|
+| `IV1_engineering_report.pdf` | The write-up. Read this first. |
 | `converged.json` | The converged design, all constraints, the mass statement with provenance, and the intercept conditions |
-| `iv1.stl` | The stacked assembly. GitHub renders this in the browser |
+| `geometry/iv1.ntop` | **The parametric nTop notebook.** Every dimension is a real notebook input, so you can open it and change the vehicle. Regenerated with relative export paths, so it carries nothing about the machine that built it. |
+| `geometry/iv1_recipe.json` | The recipe JSON the notebook was converted from. This is the human-readable source; `ntopcl convert` turns it into the `.ntop`. |
+| `geometry/iv1.stl` | The stacked assembly. GitHub renders this in the browser |
+| `geometry/iv1_input.json`, `iv1_output.json` | The `ntopcl` inputs for this design point, and what the notebook returned |
+| `geometry/iv1_measurements.json`, `iv1_stages.json` | Per-stage measurements as nTop reported them |
 | `iv1_iso.png` | The render above, showing both stages, the strakes and the interstage |
 | `trajectory.png` | The ascent, with the staging events marked |
 | `aero_iv1_validation.png` | Strake and two-stage aerodynamics, validated against NASA TN D-7921 and TM X-3130 |

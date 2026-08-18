@@ -1,0 +1,168 @@
+{
+  "inputs": [
+    {
+      "name": "S1 Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.4
+    },
+    {
+      "name": "S1 Length",
+      "type": "real",
+      "units": "m",
+      "value": 2.1
+    },
+    {
+      "name": "S1 Wall Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.0032
+    },
+    {
+      "name": "S1 Fin Semi Span",
+      "type": "real",
+      "units": "m",
+      "value": 0.2
+    },
+    {
+      "name": "S1 Fin Root Chord",
+      "type": "real",
+      "units": "m",
+      "value": 0.4
+    },
+    {
+      "name": "S1 Fin Taper",
+      "type": "real",
+      "value": 0.5
+    },
+    {
+      "name": "S1 Fin Sweep",
+      "type": "real",
+      "units": "rad",
+      "value": 0.7330382858376184
+    },
+    {
+      "name": "S1 Fin Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.01
+    },
+    {
+      "name": "S2 Diameter",
+      "type": "real",
+      "units": "m",
+      "value": 0.28
+    },
+    {
+      "name": "S2 Length",
+      "type": "real",
+      "units": "m",
+      "value": 2.7
+    },
+    {
+      "name": "S2 Wall Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.0026
+    },
+    {
+      "name": "S2 Fin Semi Span",
+      "type": "real",
+      "units": "m",
+      "value": 0.14
+    },
+    {
+      "name": "S2 Fin Root Chord",
+      "type": "real",
+      "units": "m",
+      "value": 0.3
+    },
+    {
+      "name": "S2 Fin Taper",
+      "type": "real",
+      "value": 0.5
+    },
+    {
+      "name": "S2 Fin Sweep",
+      "type": "real",
+      "units": "rad",
+      "value": 0.7330382858376184
+    },
+    {
+      "name": "S2 Fin Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.01
+    },
+    {
+      "name": "Nose Fineness",
+      "type": "real",
+      "value": 3.6
+    },
+    {
+      "name": "Interstage Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.28
+    },
+    {
+      "name": "Interstage Wall",
+      "type": "real",
+      "units": "m",
+      "value": 0.0025
+    },
+    {
+      "name": "Seeker Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.32
+    },
+    {
+      "name": "Payload Bay Length",
+      "type": "real",
+      "units": "m",
+      "value": 0.4
+    },
+    {
+      "name": "Strake Height",
+      "type": "real",
+      "units": "m",
+      "value": 0.03
+    },
+    {
+      "name": "Strake Length",
+      "type": "real",
+      "units": "m",
+      "value": 1.4
+    },
+    {
+      "name": "Strake Thickness",
+      "type": "real",
+      "units": "m",
+      "value": 0.008
+    },
+    {
+      "name": "Strake LE Station",
+      "type": "real",
+      "units": "m",
+      "value": 0.95
+    },
+    {
+      "name": "Strake Sweep",
+      "type": "real",
+      "units": "rad",
+      "value": 0.0
+    },
+    {
+      "name": "Mesh Tolerance",
+      "type": "real",
+      "units": "m",
+      "value": 0.005
+    },
+    {
+      "name": "STL Path",
+      "type": "file_path",
+      "value": "runs/IV-1_geom/exports/iv1.stl"
+    }
+  ]
+}

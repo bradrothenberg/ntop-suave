@@ -1,0 +1,155 @@
+{
+  "-1": {
+    "volume_total": 0.02568578500142895,
+    "volume_structure": 0.0012163003628525816,
+    "volume_cavity": null,
+    "volume_grain": null,
+    "area_wetted_body": 0.30541149412246427,
+    "area_wetted_fins": null,
+    "area_base": null,
+    "mass_structure": 3.4178040196157458,
+    "cg_structure": [
+      0.1630852710098134,
+      0.0006154221600851739,
+      -6.821041400069634e-05
+    ],
+    "inertia_structure": [
+      0.08355633333978688,
+      0.0785378596648368,
+      0.07844994274299419
+    ],
+    "area_distribution": [],
+    "stl_path": null,
+    "step_path": null,
+    "implicit_path": null,
+    "ntop_path": "runs/_ntop_cache/iv1_42206647f94fa914.ntop",
+    "wall_time_s": 54.22380619996693,
+    "ntopcl_returncode": 0,
+    "warnings": [
+      "the interstage is jettisoned WITH stage 1; add its mass_structure to the stage-1 jettisoned mass"
+    ],
+    "stage_index": -1,
+    "body": "interstage",
+    "area_wetted_strakes": null,
+    "volume_strakes": null,
+    "volume_fins": null,
+    "x_forward": 2.7,
+    "length": 0.28,
+    "cg_structure_stack": [
+      2.8630852710098136,
+      0.0006154221600851739,
+      -6.821041400069634e-05
+    ]
+  },
+  "0": {
+    "volume_total": 0.43192139344218283,
+    "volume_structure": 0.0211112143445663,
+    "volume_cavity": 0.3864662177718349,
+    "volume_grain": null,
+    "area_wetted_body": 5.027647736155921,
+    "area_wetted_fins": 0.8045439920442062,
+    "area_base": 0.12566370614359174,
+    "mass_structure": 59.322512308231424,
+    "cg_structure": null,
+    "inertia_structure": null,
+    "area_distribution": [],
+    "stl_path": null,
+    "step_path": null,
+    "implicit_path": null,
+    "ntop_path": "runs/_ntop_cache/iv1_42206647f94fa914.ntop",
+    "wall_time_s": 54.22380619996693,
+    "ntopcl_returncode": 0,
+    "warnings": [
+      "stack (key 0): volume_total and the area distribution are measured by nTop on the union; volume_structure, volume_cavity, mass_structure and the wetted areas are PYTHON SUMS over the per-body measurements, not separate nTop measurements",
+      "area_distribution is empty: the notebook was built with area_stations = 0. The aero model falls back to closed-form cross-section geometry."
+    ],
+    "stage_index": 0,
+    "body": "stacked assembly",
+    "area_wetted_strakes": 0.42525729046928423,
+    "volume_strakes": 0.001344750974343985,
+    "volume_fins": 0.0036599060354832996,
+    "x_forward": 0.0,
+    "length": 5.08,
+    "cg_structure_stack": null
+  },
+  "1": {
+    "volume_total": 0.2638891782825182,
+    "volume_structure": 0.011568148477161077,
+    "volume_cavity": 0.2547456214000685,
+    "volume_grain": null,
+    "area_wetted_body": 2.6422372874427817,
+    "area_wetted_fins": 0.5218423921221872,
+    "area_base": 0.12566370614359174,
+    "mass_structure": 32.50649722082276,
+    "cg_structure": [
+      1.2330714537023644,
+      0.0003180677294547765,
+      -1.7046200733801023e-05
+    ],
+    "inertia_structure": [
+      16.083172087985865,
+      16.080851667725646,
+      1.5551593270406079
+    ],
+    "area_distribution": [],
+    "stl_path": null,
+    "step_path": null,
+    "implicit_path": null,
+    "ntop_path": "runs/_ntop_cache/iv1_42206647f94fa914.ntop",
+    "wall_time_s": 54.22380619996693,
+    "ntopcl_returncode": 0,
+    "warnings": [],
+    "stage_index": 1,
+    "body": "booster, stage 1",
+    "area_wetted_strakes": null,
+    "volume_strakes": null,
+    "volume_fins": 0.0024006650043742494,
+    "x_forward": 2.9800000000000004,
+    "length": 2.1,
+    "cg_structure_stack": [
+      4.213071453702365,
+      0.0003180677294547765,
+      -1.7046200733801023e-05
+    ]
+  },
+  "2": {
+    "volume_total": 0.1374584039656953,
+    "volume_structure": 0.008326765504552639,
+    "volume_cavity": 0.13172059637176634,
+    "volume_grain": null,
+    "area_wetted_body": 2.079998954590675,
+    "area_wetted_fins": 0.28270159992201904,
+    "area_base": 0.06157521601035995,
+    "mass_structure": 23.398211067792925,
+    "cg_structure": [
+      1.6967638044737585,
+      2.217263910194108e-05,
+      -0.00039495368244400395
+    ],
+    "inertia_structure": [
+      12.592878559329026,
+      12.592544092154697,
+      0.5119226959996626
+    ],
+    "area_distribution": [],
+    "stl_path": null,
+    "step_path": null,
+    "implicit_path": null,
+    "ntop_path": "runs/_ntop_cache/iv1_42206647f94fa914.ntop",
+    "wall_time_s": 54.22380619996693,
+    "ntopcl_returncode": 0,
+    "warnings": [],
+    "stage_index": 2,
+    "body": "payload stage, stage 2",
+    "area_wetted_strakes": 0.42525729046928423,
+    "volume_strakes": 0.001344750974343985,
+    "volume_fins": 0.0012592410311090502,
+    "x_forward": 0.0,
+    "length": 2.7,
+    "cg_structure_stack": [
+      1.6967638044737585,
+      2.217263910194108e-05,
+      -0.00039495368244400395
+    ]
+  }
+}
