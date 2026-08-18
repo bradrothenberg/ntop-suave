@@ -122,6 +122,33 @@ SOURCES: dict[str, str] = {
         "(ARBRL-MR-02293) cites for boattail pressure drag. Pressure recovery along the "
         "boattail is NOT modelled, so this is an upper bound on the boattail contribution."
     ),
+    "aero_oblique_shock": (
+        "Exact oblique-shock relations for a compressive turn. The theta-beta-Mach relation "
+        "tan(theta) = 2 cot(beta)(M^2 sin^2 beta - 1)/(M^2(gamma + cos 2beta) + 2) is solved in "
+        "CLOSED FORM for the weak root using the explicit cubic solution given by "
+        "J. D. Anderson, Modern Compressible Flow, and by T. W. Thompson (1950) / "
+        "L. Rudd and M. J. Lewis, 'Comparison of Shock Calculation Methods', J. Aircraft 35(4), "
+        "1998: tan(beta) = (M^2 - 1 + 2 lambda cos((4 pi d + arccos chi)/3)) / "
+        "(3 (1 + (gamma-1)/2 M^2) tan theta), with d = 1 for the weak solution, "
+        "lambda^2 = (M^2-1)^2 - 3(1+(gamma-1)/2 M^2)(1+(gamma+1)/2 M^2) tan^2 theta and "
+        "chi = ((M^2-1)^3 - 9(1+(gamma-1)/2 M^2)(1+(gamma-1)/2 M^2+(gamma+1)/4 M^4) tan^2 "
+        "theta)/lambda^3. Static pressure from Rankine-Hugoniot, "
+        "p2/p1 = 1 + 2 gamma/(gamma+1)(M^2 sin^2 beta - 1), giving "
+        "Cp = 4/(gamma+1) (M^2 sin^2 beta - 1)/M^2. Verified against the textbook case "
+        "M = 2, theta = 10 deg -> beta = 39.31 deg, p2/p1 = 1.707. chi = -1 is exactly the "
+        "detachment condition, which gives the maximum attached deflection with no table lookup."
+    ),
+    "aero_isentropic_compression_turn": (
+        "Pressure rise through a compressive turn taken as an exact isentropic Prandtl-Meyer "
+        "compression, nu2 = nu1 - delta, with Cp = (2/(gamma M1^2))(p2/p1 - 1). Same gas "
+        "dynamics and the same reference as the boattail expansion, Liepmann and Roshko, "
+        "Elements of Gasdynamics (1957), run in the opposite direction. APPROXIMATION: the "
+        "entropy rise across the real oblique shock is not modelled, and when delta exceeds "
+        "the available Prandtl-Meyer angle the shock detaches and the value is clamped at the "
+        "sonic result, which UNDERSTATES the detached-shock pressure. Used by "
+        "`aero_iv1` for the interstage shoulder; the single-body SV-1 build-up has no "
+        "compressive turn and so does not exercise it."
+    ),
     "aero_fin_wave_drag": (
         "Fin thickness (wave) drag from Ackeret linearised supersonic thin-airfoil theory for a "
         "symmetric double wedge: cd = (t/c)^2 / [x_t (1 - x_t) sqrt(M^2 - 1)], which reduces to "
@@ -350,6 +377,298 @@ def _cp_max_stagnation(mach: float) -> float:
             (g + 1.0) / (2.0 * g * mach * mach - (g - 1.0))
         ) ** (1.0 / (g - 1.0))
     return 2.0 / (g * mach * mach) * (pt_p - 1.0)
+
+
+# --------------------------------------------------------------------------------------
+#   Shared physics kernels
+#
+#   These are the validated pieces of the build-up, exposed as free functions so that a
+#   multi-body configuration can reuse them without a second implementation. `RocketAero`
+#   below is a thin assembly over exactly these functions, and so is
+#   `aero_iv1.StackAero`. Every one of them keeps the arithmetic it had when it lived
+#   inside a `RocketAero` method, so the Basic Finner validation still covers them.
+# --------------------------------------------------------------------------------------
+
+
+def body_form_factor(fineness: float) -> float:
+    """Body-of-revolution friction form factor. See SOURCES["aero_body_form_factor"]."""
+    return 1.0 + 60.0 / fineness ** 3 + fineness / 400.0
+
+
+def surface_form_factor(t_over_c: float, x_t: float) -> float:
+    """Lifting-surface thickness form factor. See SOURCES["aero_fin_form_factor"]."""
+    return 1.0 + 0.6 * t_over_c / x_t + 100.0 * t_over_c ** 4
+
+
+def bonney_nose_wave_cd(f_nose: float, mach: float) -> float:
+    """Forebody wave drag on the NOSE BASE AREA. See SOURCES["aero_body_wave_drag"].
+
+    The caller refers it to whatever reference area it is using. Blended to zero below
+    M = 0.95 with the cubic Hermite bridge, which is not physics.
+    """
+    shape = math.atan(0.5 / f_nose) ** 1.69
+    m = max(mach, M_BRIDGE_HI)
+    cd_super = (1.59 + 1.83 / (m * m)) * shape
+    return (1.0 - cubic_blend(mach, M_BRIDGE_LO, M_BRIDGE_HI)) * cd_super
+
+
+def base_cd_on_base_area(mach: float) -> float:
+    """Base drag referred to the BASE AREA, coast. See SOURCES["aero_base_drag"]."""
+    m_sup = max(mach, M_BASE_LO)
+    cd_sup = 0.25 / m_sup
+    cd_sub = 0.12 + 0.13 * mach * mach
+    w = cubic_blend(mach, M_BASE_LO, M_BASE_HI)
+    return w * cd_sub + (1.0 - w) * cd_sup
+
+
+def _isentropic_cp(m1: float, m2: float) -> float:
+    """Pressure coefficient of an isentropic turn from M1 to M2, on the M1 dynamic pressure."""
+    h = 0.5 * (GAMMA - 1.0)
+    p_ratio = ((1.0 + h * m1 * m1) / (1.0 + h * m2 * m2)) ** (GAMMA / (GAMMA - 1.0))
+    return 2.0 / (GAMMA * m1 * m1) * (p_ratio - 1.0)
+
+
+def expansion_turn_cp(mach: float, delta: float) -> float:
+    """Cp after an isentropic expansion through `delta` rad. See SOURCES["aero_boattail_drag"].
+
+    Negative, because an expansion drops the static pressure. Exact Prandtl-Meyer, not a
+    linearisation.
+    """
+    if delta <= 0.0 or mach <= 1.0:
+        return 0.0
+    nu2 = _prandtl_meyer_nu(mach) + delta
+    return _isentropic_cp(mach, _prandtl_meyer_mach(nu2))
+
+
+def compression_turn_cp(mach: float, delta: float) -> float:
+    """Cp after an isentropic compression through `delta` rad, on the upstream q.
+
+    Positive. The exact Prandtl-Meyer function run backwards, so it is the mirror image of
+    `expansion_turn_cp` and shares its gas dynamics. See
+    SOURCES["aero_isentropic_compression_turn"].
+
+    When `delta` exceeds the available Prandtl-Meyer angle the turn cannot be made
+    isentropically and the real flow throws a detached shock. The value is then clamped at
+    the sonic result, which UNDERSTATES the pressure behind a detached shock.
+    """
+    if delta <= 0.0 or mach <= 1.0:
+        return 0.0
+    nu1 = _prandtl_meyer_nu(mach)
+    nu2 = nu1 - delta
+    m2 = _prandtl_meyer_mach(nu2) if nu2 > 0.0 else 1.0
+    return _isentropic_cp(mach, m2)
+
+
+def _oblique_shock_chi(mach: float, theta: float) -> tuple[float, float]:
+    """(lambda, chi) of the explicit oblique-shock solution, or (0, -inf) past detachment.
+
+    Helper for `oblique_shock_cp`. `chi` reaches -1 exactly at the maximum attached deflection,
+    and `lambda**2` goes negative beyond it, so the pair is also the detachment test.
+    """
+    m2 = mach * mach
+    a = 1.0 + 0.5 * (GAMMA - 1.0) * m2
+    b = 1.0 + 0.5 * (GAMMA + 1.0) * m2
+    c = 1.0 + 0.5 * (GAMMA - 1.0) * m2 + 0.25 * (GAMMA + 1.0) * m2 * m2
+    tt = math.tan(theta) ** 2
+    lam2 = (m2 - 1.0) ** 2 - 3.0 * a * b * tt
+    if lam2 <= 0.0:
+        return 0.0, -float("inf")
+    lam = math.sqrt(lam2)
+    chi = ((m2 - 1.0) ** 3 - 9.0 * a * c * tt) / (lam * lam * lam)
+    return lam, chi
+
+
+def oblique_shock_theta_max(mach: float) -> float:
+    """Maximum deflection angle, rad, for which an oblique shock stays attached.
+
+    Found by bisection on the condition chi = -1, where the weak and strong solutions merge.
+    See SOURCES["aero_oblique_shock"]. Returns 0 at or below M = 1.
+    """
+    if mach <= 1.0:
+        return 0.0
+    m2 = mach * mach
+    a = 1.0 + 0.5 * (GAMMA - 1.0) * m2
+    b = 1.0 + 0.5 * (GAMMA + 1.0) * m2
+    # chi is monotone decreasing in theta, and lambda^2 vanishes above the merge point, so this
+    # upper bracket is always past detachment.
+    hi = math.atan(math.sqrt((m2 - 1.0) ** 2 / (3.0 * a * b)))
+    lo = 0.0
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        _, chi = _oblique_shock_chi(mach, mid)
+        if chi < -1.0:
+            hi = mid
+        else:
+            lo = mid
+        if hi - lo < 1.0e-10:
+            break
+    return lo
+
+
+def oblique_shock_cp(mach: float, delta: float) -> tuple[float, bool]:
+    """(pressure coefficient, attached) behind a weak oblique shock turning the flow `delta`.
+
+    Exact closed-form weak solution of the theta-beta-Mach relation, then the Rankine-Hugoniot
+    static-pressure ratio. This is the tangent-wedge estimate for a flare on a cylinder.
+    See SOURCES["aero_oblique_shock"].
+
+    When `delta` exceeds the maximum attached deflection the shock detaches and there is no
+    weak solution. The value is then CLAMPED at the maximum attached deflection, which is
+    continuous in Mach and is a LOWER bound on the real detached-shock surface pressure.
+    """
+    if mach <= 1.0 or delta <= 0.0:
+        return 0.0, False
+    m2 = mach * mach
+    a = 1.0 + 0.5 * (GAMMA - 1.0) * m2
+
+    lam, chi = _oblique_shock_chi(mach, delta)
+    attached = chi >= -1.0
+    if not attached:
+        delta = oblique_shock_theta_max(mach)
+        if delta <= 0.0:
+            return 0.0, False
+        lam, chi = _oblique_shock_chi(mach, delta)
+        chi = max(chi, -1.0)
+    chi = min(max(chi, -1.0), 1.0)
+
+    t = math.tan(delta)
+    # delta = 1 selects the weak (physically realised) root of the cubic.
+    tan_beta = (m2 - 1.0 + 2.0 * lam * math.cos((4.0 * math.pi + math.acos(chi)) / 3.0)) / (
+        3.0 * a * t
+    )
+    beta = math.atan(tan_beta)
+    msb2 = m2 * math.sin(beta) ** 2
+    if msb2 < 1.0:
+        msb2 = 1.0
+    cp = 4.0 / (GAMMA + 1.0) * (msb2 - 1.0) / m2
+    return cp, attached
+
+
+def fin_wave_cd_2d(t_over_c: float, x_t: float, mach: float) -> float:
+    """Ackeret double-wedge thickness drag, 2D, on the PLANFORM area of one side.
+
+    See SOURCES["aero_fin_wave_drag"]. Blended to zero below M = 0.95.
+    """
+    m = max(mach, M_BRIDGE_HI)
+    beta = math.sqrt(m * m - 1.0)
+    cd_2d = t_over_c * t_over_c / (x_t * (1.0 - x_t) * beta)
+    return (1.0 - cubic_blend(mach, M_BRIDGE_LO, M_BRIDGE_HI)) * cd_2d
+
+
+def newtonian_le_cd(
+    n_pairs: float,
+    sweep_le: float,
+    t_max: float,
+    x_t: float,
+    c_mac: float,
+    span: float,
+    S_ref: float,
+    mach: float,
+) -> float:
+    """Newtonian-impact leading-edge drag of a surface set, on S_ref.
+
+    See SOURCES["aero_fin_wave_drag_crosscheck"]. Reported as a cross-check, never summed.
+    """
+    if S_ref <= 0.0 or c_mac <= 0.0:
+        return 0.0
+    m_le = mach * math.cos(sweep_le)
+    cp_max = _cp_max_stagnation(m_le)
+    delta_le = 2.0 * math.atan(t_max / (2.0 * x_t * c_mac))
+    return (
+        n_pairs
+        * cp_max
+        * math.sin(delta_le) ** 2
+        * math.cos(sweep_le)
+        * t_max
+        * span
+        / S_ref
+    )
+
+
+def body_normal_force_terms(
+    S_base: float, S_ref: float, area_planform: float, alpha: float
+) -> tuple[float, float]:
+    """(potential, cross-flow) body normal force on S_ref.
+
+    See SOURCES["aero_body_normal_force"]. No Mach dependence, by construction.
+    """
+    a = abs(alpha)
+    potential = (S_base / S_ref) * math.sin(2.0 * a) * math.cos(0.5 * a)
+    crossflow = ETA_CD_CROSS * (area_planform / S_ref) * math.sin(a) ** 2
+    s = 1.0 if alpha >= 0.0 else -1.0
+    return s * potential, s * crossflow
+
+
+def lifting_surface_cn_alone(aspect_ratio_pair: float, mach: float, alpha: float) -> float:
+    """Normal force of one opposing panel pair, referred to the PAIR EXPOSED AREA.
+
+    Slender-wing below the branch Mach number, linearised supersonic above, blended across.
+    Interference factors are the caller's job. See SOURCES["aero_fin_normal_force"].
+    """
+    if aspect_ratio_pair <= 0.0:
+        return 0.0
+    a = abs(alpha)
+    sc = abs(math.sin(a) * math.cos(a))
+    s2 = math.sin(a) ** 2
+    ar = aspect_ratio_pair
+
+    m_c = math.sqrt(1.0 + (8.0 / (math.pi * ar)) ** 2)
+    slender = (math.pi * ar / 2.0) * sc + 2.0 * s2
+    m_lin = max(mach, m_c)
+    linear = 4.0 * sc / math.sqrt(m_lin * m_lin - 1.0) + 2.0 * s2
+
+    w = cubic_blend(mach, 0.9 * m_c, 1.1 * m_c)
+    cn = w * slender + (1.0 - w) * linear
+    return cn if alpha >= 0.0 else -cn
+
+
+def barrowman_upwash(radius_body: float, radius_tip: float) -> float:
+    """Body-upwash interference factor 1 + a/s. See SOURCES["aero_fin_body_upwash"]."""
+    if radius_tip <= 0.0:
+        return 1.0
+    return 1.0 + radius_body / radius_tip
+
+
+def solve_alpha_for_cn(
+    cn_of, target_cn: float, alpha_max: float
+) -> float:
+    """Angle of attack, rad, at which `cn_of(alpha)` reaches `target_cn`.
+
+    Bracketed bisection with a secant accelerator. `cn_of` must be non-decreasing on
+    [0, alpha_max], which every normal-force model in this package is. Saturates at
+    `alpha_max` rather than raising, so a sizing loop sees a clipped control instead of an
+    exception. Signs are carried through, so a negative target returns a negative alpha.
+    """
+    target = float(target_cn)
+    sign = 1.0 if target >= 0.0 else -1.0
+    target = abs(target)
+    if target <= 0.0:
+        return 0.0
+
+    cn_max = cn_of(alpha_max)
+    if target >= cn_max:
+        return sign * alpha_max
+
+    lo, hi = 0.0, alpha_max
+    f_lo, f_hi = -target, cn_max - target
+    a = target / (cn_max / alpha_max)   # linear first guess
+    for _ in range(60):
+        f = cn_of(a) - target
+        if abs(f) < 1.0e-12:
+            break
+        if f > 0.0:
+            hi, f_hi = a, f
+        else:
+            lo, f_lo = a, f
+        # secant inside the bracket, bisect if it steps outside
+        if f_hi != f_lo:
+            a_sec = lo - f_lo * (hi - lo) / (f_hi - f_lo)
+        else:
+            a_sec = 0.5 * (lo + hi)
+        a = a_sec if lo < a_sec < hi else 0.5 * (lo + hi)
+        if hi - lo < 1.0e-14:
+            break
+    return sign * a
 
 
 # --------------------------------------------------------------------------------------
@@ -637,8 +956,7 @@ class RocketAero:
 
         S_fin_pair = 2.0 * S_fin_panel
         ar_pair = (2.0 * b_fin) ** 2 / S_fin_pair if S_fin_pair > 0.0 else 0.0
-        s_tip = R + b_fin
-        k_upwash = 1.0 + R / s_tip
+        k_upwash = barrowman_upwash(R, R + b_fin)
 
         x_fin_le = dv.x_fin_le
         X_R = b_fin * math.tan(dv.sweep_fin)
@@ -703,8 +1021,7 @@ class RocketAero:
         g = self.geom
         re_per_m, t_inf = flow if flow is not None else self._flow(altitude, mach)
         cf = cf_turbulent(re_per_m * g.L_total, mach, t_inf)
-        f = g.L_total / g.D
-        ff = 1.0 + 60.0 / f ** 3 + f / 400.0
+        ff = body_form_factor(g.L_total / g.D)
         return ff * cf * g.area_wetted_body / g.S_ref
 
     def CD_wave_body(self, mach: float) -> float:
@@ -715,11 +1032,10 @@ class RocketAero:
         See SOURCES["aero_body_wave_drag"] and SOURCES["aero_transonic_bridge"].
         """
         g = self.geom
-        f_nose = g.L_nose / g.D
-        shape = math.atan(0.5 / f_nose) ** 1.69
-        m = max(mach, M_BRIDGE_HI)
-        cd_super = (1.59 + 1.83 / (m * m)) * shape
-        return (1.0 - cubic_blend(mach, M_BRIDGE_LO, M_BRIDGE_HI)) * cd_super
+        # The nose base diameter is the body diameter, so the nose base area is S_ref and no
+        # area referral is needed. `aero_iv1` has a nose narrower than its reference area and
+        # therefore does need one.
+        return bonney_nose_wave_cd(g.L_nose / g.D, mach)
 
     def CD_wave_body_crosscheck(self, mach: float) -> float:
         """Second wave-drag correlation, reported but never summed into CD0.
@@ -734,12 +1050,7 @@ class RocketAero:
     def CD_base(self, mach: float, power_on: bool = False) -> float:
         """Base drag on the base area, on S_ref. See SOURCES["aero_base_drag"]."""
         g = self.geom
-        m_sup = max(mach, M_BASE_LO)
-        cd_sup = 0.25 / m_sup
-        cd_sub = 0.12 + 0.13 * mach * mach
-        w = cubic_blend(mach, M_BASE_LO, M_BASE_HI)
-        cd = w * cd_sub + (1.0 - w) * cd_sup
-        cd *= g.S_base / g.S_ref
+        cd = base_cd_on_base_area(mach) * g.S_base / g.S_ref
         if power_on:
             relief = 1.0 - g.area_nozzle_exit / g.S_base
             cd *= max(relief, 0.0)
@@ -759,12 +1070,7 @@ class RocketAero:
         if annulus <= 0.0:
             return 0.0
         m1 = max(mach, M_BRIDGE_HI)
-        nu2 = _prandtl_meyer_nu(m1) + g.beta_boattail
-        m2 = _prandtl_meyer_mach(nu2)
-        h = 0.5 * (GAMMA - 1.0)
-        p_ratio = ((1.0 + h * m1 * m1) / (1.0 + h * m2 * m2)) ** (GAMMA / (GAMMA - 1.0))
-        cp = 2.0 / (GAMMA * m1 * m1) * (p_ratio - 1.0)
-        cd_super = -cp * annulus
+        cd_super = -expansion_turn_cp(m1, g.beta_boattail) * annulus
         return (1.0 - cubic_blend(mach, M_BRIDGE_LO, M_BRIDGE_HI)) * max(cd_super, 0.0)
 
     def CD_fin_friction(
@@ -780,8 +1086,7 @@ class RocketAero:
             return 0.0
         re_per_m, t_inf = flow if flow is not None else self._flow(altitude, mach)
         cf = cf_turbulent(re_per_m * g.c_mac, mach, t_inf)
-        tc = g.t_fin / g.c_mac
-        ff = 1.0 + 0.6 * tc / g.x_t_fin + 100.0 * tc ** 4
+        ff = surface_form_factor(g.t_fin / g.c_mac, g.x_t_fin)
         return ff * cf * g.area_wetted_fins / g.S_ref
 
     def CD_fin_wave(self, mach: float) -> float:
@@ -794,13 +1099,8 @@ class RocketAero:
         g = self.geom
         if g.n_fin < 1 or g.S_fin_panel <= 0.0:
             return 0.0
-        tc = g.t_fin / g.c_mac
-        xt = g.x_t_fin
-        m = max(mach, M_BRIDGE_HI)
-        beta = math.sqrt(m * m - 1.0)
-        cd_2d = tc * tc / (xt * (1.0 - xt) * beta)
-        area_ratio = g.n_fin * g.S_fin_panel / g.S_ref
-        return (1.0 - cubic_blend(mach, M_BRIDGE_LO, M_BRIDGE_HI)) * cd_2d * area_ratio
+        cd_2d = fin_wave_cd_2d(g.t_fin / g.c_mac, g.x_t_fin, mach)
+        return cd_2d * g.n_fin * g.S_fin_panel / g.S_ref
 
     def CD_fin_wave_crosscheck(self, mach: float) -> float:
         """Newtonian-impact fin leading-edge drag. Reported, never summed into CD0.
@@ -810,19 +1110,15 @@ class RocketAero:
         g = self.geom
         if g.n_fin < 1 or g.S_fin_panel <= 0.0:
             return 0.0
-        m_le = mach * math.cos(g.sweep_le)
-        cp_max = _cp_max_stagnation(m_le)
-        delta_le = 2.0 * math.atan(g.t_fin / (2.0 * g.x_t_fin * g.c_mac))
-        span = 2.0 * (0.5 * g.D + g.b_fin)
-        n_pairs = g.n_fin / 2.0
-        return (
-            n_pairs
-            * cp_max
-            * math.sin(delta_le) ** 2
-            * math.cos(g.sweep_le)
-            * g.t_fin
-            * span
-            / g.S_ref
+        return newtonian_le_cd(
+            n_pairs=g.n_fin / 2.0,
+            sweep_le=g.sweep_le,
+            t_max=g.t_fin,
+            x_t=g.x_t_fin,
+            c_mac=g.c_mac,
+            span=2.0 * (0.5 * g.D + g.b_fin),
+            S_ref=g.S_ref,
+            mach=mach,
         )
 
     def CD_protuberance(self, cd_clean: float) -> float:
@@ -842,13 +1138,7 @@ class RocketAero:
         follows has none either. See SOURCES["aero_body_normal_force"].
         """
         g = self.geom
-        a = abs(alpha)
-        potential = (g.S_base / g.S_ref) * math.sin(2.0 * a) * math.cos(0.5 * a)
-        crossflow = (
-            ETA_CD_CROSS * (g.area_planform_body / g.S_ref) * math.sin(a) ** 2
-        )
-        s = 1.0 if alpha >= 0.0 else -1.0
-        return s * potential, s * crossflow
+        return body_normal_force_terms(g.S_base, g.S_ref, g.area_planform_body, alpha)
 
     def CN_fins(self, mach: float, alpha: float) -> float:
         """Fin normal force including interference, on S_ref.
@@ -861,20 +1151,12 @@ class RocketAero:
         g = self.geom
         if g.n_fin < 2 or g.S_fin_pair <= 0.0 or g.aspect_ratio_pair <= 0.0:
             return 0.0
-        a = abs(alpha)
-        sc = abs(math.sin(a) * math.cos(a))
-        s2 = math.sin(a) ** 2
-        ar = g.aspect_ratio_pair
-
-        m_c = math.sqrt(1.0 + (8.0 / (math.pi * ar)) ** 2)
-        slender = (math.pi * ar / 2.0) * sc + 2.0 * s2
-        m_lin = max(mach, m_c)
-        linear = 4.0 * sc / math.sqrt(m_lin * m_lin - 1.0) + 2.0 * s2
-
-        w = cubic_blend(mach, 0.9 * m_c, 1.1 * m_c)
-        cn_alone = (w * slender + (1.0 - w) * linear) * g.S_fin_pair / g.S_ref
-        cn = cn_alone * g.k_upwash * self.k_afterbody_carryover
-        return cn if alpha >= 0.0 else -cn
+        cn_alone = (
+            lifting_surface_cn_alone(g.aspect_ratio_pair, mach, alpha)
+            * g.S_fin_pair
+            / g.S_ref
+        )
+        return cn_alone * g.k_upwash * self.k_afterbody_carryover
 
     def x_cp_fins(self, mach: float) -> float:
         """Fin centre of pressure from the nose tip, m. See SOURCES["aero_fin_cp"]."""
@@ -1022,37 +1304,9 @@ class RocketAero:
         `-alpha_max`) when the required CN is beyond what the configuration can produce, so the
         sizing loop sees a saturated control rather than an exception.
         """
-        target = float(required_CN)
-        sign = 1.0 if target >= 0.0 else -1.0
-        target = abs(target)
-        if target <= 0.0:
-            return 0.0
 
         def cn_of(a: float) -> float:
             p, c = self.CN_body(mach, a)
             return p + c + self.CN_fins(mach, a)
 
-        cn_max = cn_of(alpha_max)
-        if target >= cn_max:
-            return sign * alpha_max
-
-        lo, hi = 0.0, alpha_max
-        f_lo, f_hi = -target, cn_max - target
-        a = target / (cn_max / alpha_max)   # linear first guess
-        for _ in range(60):
-            f = cn_of(a) - target
-            if abs(f) < 1.0e-12:
-                break
-            if f > 0.0:
-                hi, f_hi = a, f
-            else:
-                lo, f_lo = a, f
-            # secant inside the bracket, bisect if it steps outside
-            if f_hi != f_lo:
-                a_sec = lo - f_lo * (hi - lo) / (f_hi - f_lo)
-            else:
-                a_sec = 0.5 * (lo + hi)
-            a = a_sec if lo < a_sec < hi else 0.5 * (lo + hi)
-            if hi - lo < 1.0e-14:
-                break
-        return sign * a
+        return solve_alpha_for_cn(cn_of, float(required_CN), alpha_max)
