@@ -17,6 +17,7 @@ report can be regenerated from disk without re-running the analysis.
 from __future__ import annotations
 
 import argparse
+import dataclasses as dc
 import json
 import math
 import os
@@ -242,6 +243,39 @@ SV1_CONVERGED = DesignVector(
 )
 
 
+# The converged SPLINE SV-1, found by `--stage size --oml spline` (60 evaluations, 2115 s) with
+# real nTop geometry in the loop: 551.3 kg, 194.0 km, impact Mach 1.68, q_max 199.2 kPa, all ten
+# constraints met. Recorded so `--stage doe --oml spline` can be run on its own and still centre
+# the trade study on the sized design, for the same reason SV1_CONVERGED exists.
+#
+# Two things in here are results, not settings, and are worth reading:
+#
+#   nose_blend = 0.7, NOT 1.0. The sizer had the drag optimum available and did not take it.
+#   Past about 0.7 the forebody volume and the aft shift in centre of pressure cost more than
+#   the remaining wave drag saves, so the shape trade has a genuine interior optimum.
+#
+#   q_max = 199.2 kPa against a 200 kPa limit. Lower drag buys speed, and speed is paid for in
+#   dynamic pressure, so the spline design sits harder against the structural constraint than
+#   the ogive design did (193.5 kPa). The drag saving did not come free.
+SV1_SPLINE_CONVERGED = DesignVector(
+    D=0.35,
+    L_total=3.60,
+    f_nose=3.4,
+    nose_shape="spline",
+    nose_blend=0.7,
+    boattail_shape="spline",
+    boattail_blend=0.35,
+    m_p_boost=130.0,
+    m_p_sustain=172.0,
+    m_p_terminal=40.0,
+    F_boost=45.0e3,
+    F_terminal=8.0e3,
+    b_fin=0.23,
+    c_r_fin=0.34,
+    x_fin_te_gap=0.08,
+)
+
+
 def stage_size(reqs: Requirements, geometry_fn, max_evals: int) -> Any:
     """The sizing search."""
     print(f"\n=== SIZE: pattern search, budget {max_evals} evaluations ===")
@@ -388,13 +422,97 @@ def _write_rows(rows: list[dict[str, Any]], path: str) -> None:
 # --------------------------------------------------------------------------------------
 
 
+def stage_converged(reqs: Requirements, geometry_fn, dv: DesignVector) -> None:
+    """Re-run the sized design once with nTop and once analytically, and export the geometry.
+
+    This is what `scripts/build_example.py` curates, and it was previously missing: the sizing
+    stage writes only its own best point, with no exported CAD and no analytic counterpart to
+    compare against. Without this stage a fresh clone could not regenerate the example, which is
+    exactly the failure CLAUDE.md section 11 warns about.
+
+    The analytic run is not decoration. The difference between the two is the whole point of the
+    coupling: it says how much the measured geometry moved the answer, and
+    `build_example.build_design` writes it out as `ntop_coupling_effect.csv`.
+    """
+    print("\n=== CONVERGED: the sized point, measured and analytic ===")
+    out = os.path.join(OUT, "converged")
+    os.makedirs(out, exist_ok=True)
+    t0 = time.perf_counter()
+
+    # Measured. Exports are ON here and only here: they cost minutes, and this is the one point
+    # whose CAD actually ships.
+    geom_dir = os.path.join(out, "geom")
+    os.makedirs(geom_dir, exist_ok=True)
+
+    def measured_geometry(d: DesignVector, run_dir: str):
+        # Imported here, not at module scope, for the same reason `get_geometry_fn` does it:
+        # `run_sv1.py --no-ntop` must work on a machine with no nTop installed at all.
+        from rocketgen.ntopgen.rocket_notebook import measure_rocket
+
+        return measure_rocket(
+            d, run_dir, export_stl=True, export_step=True, export_implicit=True,
+            area_stations=16,
+        )
+
+    fn = measured_geometry if geometry_fn is not None else None
+    p_ntop = converge_point(dv, reqs, geometry_fn=fn, run_dir=geom_dir,
+                            max_iter=3, dt=0.02, adaptive=False)
+    dump_point(p_ntop, os.path.join(out, "point_ntop.json"))
+    print(f"  nTop-measured: {p_ntop.summary()}")
+    if p_ntop.meas is not None:
+        p_ntop.meas.to_json(os.path.join(out, "measurements.json"))
+        print(f"  wrote {out}/measurements.json")
+
+    # Analytic, same design vector, no nTop at all.
+    p_an = converge_point(dv, reqs, geometry_fn=None, run_dir=out,
+                          max_iter=3, dt=0.02, adaptive=False)
+    dump_point(p_an, os.path.join(out, "point_analytic.json"))
+    print(f"  analytic:      {p_an.summary()}")
+
+    if p_ntop.masses is not None and p_an.masses is not None:
+        d_m = p_ntop.masses.total - p_an.masses.total
+        print(f"  coupling effect on launch mass: {d_m:+.2f} kg "
+              f"({d_m / p_an.masses.total * 100:+.2f} percent)")
+    print(f"converged stage took {time.perf_counter() - t0:.1f} s")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--stage", default="smoke", choices=["smoke", "size", "doe", "all"])
+    ap.add_argument("--stage", default="smoke",
+                    choices=["smoke", "size", "doe", "converged", "all"])
     ap.add_argument("--no-ntop", action="store_true", help="skip nTop, analytic geometry only")
     ap.add_argument("--max-evals", type=int, default=60, help="sizing evaluation budget")
     ap.add_argument("--doe-scale", default=None, choices=["smoke", "full"])
+    ap.add_argument(
+        "--oml", default="ogive", choices=["ogive", "spline"],
+        help=(
+            "outer mould line family. 'ogive' is the tangent-ogive nose and conical boattail "
+            "the study was originally run with. 'spline' swaps in the clamped cubic B-spline "
+            "family and lets the sizer move `nose_blend` and `boattail_blend`, which the "
+            "slender-body wave-drag ratio in sizing/wavedrag.py then responds to."
+        ),
+    )
+    ap.add_argument(
+        "--out", default=None,
+        help="output directory; defaults to runs/SV-1 for ogive, runs/SV-1_spline for spline",
+    )
     args = ap.parse_args()
+
+    global OUT, SIZING_START, SV1_CONVERGED
+    if args.oml == "spline":
+        # Start the search at the ogive-equivalent blend, NOT at the drag optimum. Starting at
+        # the answer would make the sizing result unfalsifiable: the run has to be able to
+        # move away from the optimum if the volume and stability penalties outweigh the drag.
+        SIZING_START = dc.replace(
+            SIZING_START, nose_shape="spline", nose_blend=0.0,
+            boattail_shape="spline", boattail_blend=0.0,
+        )
+        # The trade study centres on the SIZED spline design, not on a blend-0 stand-in.
+        # CLAUDE.md section 6: a DOE centred away from the converged point returns an empty
+        # feasible region and looks like a modelling failure when it is a bad base point.
+        SV1_CONVERGED = SV1_SPLINE_CONVERGED
+    OUT = args.out or (os.path.join("runs", "SV-1_spline")
+                       if args.oml == "spline" else os.path.join("runs", "SV-1"))
 
     os.makedirs(OUT, exist_ok=True)
     reqs = Requirements()
@@ -416,11 +534,14 @@ def main() -> int:
             best_dv = fine.dv
     if args.stage in ("doe", "all"):
         stage_doe(reqs, geometry_fn, best_dv, doe_scale)
+    if args.stage in ("converged", "all"):
+        stage_converged(reqs, geometry_fn, best_dv)
 
     dump_provenance(
         os.path.join(OUT, "provenance.json"),
         {
             "stage": args.stage,
+            "oml_family": args.oml,
             "ntop_enabled": geometry_fn is not None,
             "doe_scale": doe_scale,
             "max_evals": args.max_evals,

@@ -151,7 +151,28 @@ def size_acs(dv, reqs, geometry_fn=None, run_dir=None, margin: float = 1.06, ite
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--ntop", action="store_true", help="measure the geometry with nTop")
+    ap.add_argument(
+        "--oml", default="ogive", choices=["ogive", "spline"],
+        help=(
+            "outer mould line family. 'spline' swaps the payload-stage tangent-ogive nose and "
+            "the conical interstage flare for the clamped cubic B-spline family, and lets the "
+            "slender-body wave-drag ratio in sizing/wavedrag.py respond to the shape."
+        ),
+    )
+    ap.add_argument(
+        "--nose-blend", type=float, default=None,
+        help="fix the nose blend (0 = ogive-equivalent, 1 = slender-body drag optimum) "
+             "instead of sweeping it",
+    )
+    ap.add_argument(
+        "--interstage-blend", type=float, default=None,
+        help="fix the interstage flare blend (0 = the straight cone)",
+    )
+    ap.add_argument("--out", default=None, help="output directory")
     args = ap.parse_args()
+    global OUT
+    OUT = args.out or (os.path.join(REPO, "runs", "IV-1_spline")
+                       if args.oml == "spline" else os.path.join(REPO, "runs", "IV-1"))
     os.makedirs(OUT, exist_ok=True)
     reqs = InterceptRequirements()
 
@@ -167,11 +188,25 @@ def main() -> int:
     else:
         print("nTop geometry: disabled, analytic geometry only")
 
+    # Shape family. Both blends default to 0, i.e. the ogive-equivalent nose and the straight
+    # cone, so `--oml spline` with no blend given reproduces the ogive result and any remaining
+    # difference is attributable to the REPRESENTATION alone rather than to the shape.
+    def shaped(dv):
+        if args.oml != "spline":
+            return dv
+        return dv.replace(
+            nose_shape="spline",
+            nose_blend=0.0 if args.nose_blend is None else float(args.nose_blend),
+            interstage_shape="spline",
+            interstage_blend=(0.0 if args.interstage_blend is None
+                              else float(args.interstage_blend)),
+        )
+
     print("\nsearching the pitchover angle (range is not monotone in it)")
     best = None
     grid = [(g, 18.0e3) for g in (32.0, 34.0, 36.0, 38.0)]
     for gamma_deg, F2 in grid:
-        dv = base_stack().replace(gamma_pitch=math.radians(gamma_deg))
+        dv = shaped(base_stack().replace(gamma_pitch=math.radians(gamma_deg)))
         dv.stages[1].F_thrust = F2
         dv, r = size_acs(dv, reqs, geometry_fn, os.path.join(OUT, "geom"))
         ic = r["intercept"]
