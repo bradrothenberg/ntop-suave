@@ -61,12 +61,12 @@ def make_figure(path: str | None = None) -> str:
         ax_a.set_xlabel("nose fineness, L_nose / D")
         ax_a.set_ylabel("Glauert shape factor")
         ax_a.set_title("(a) the gap the spline collects", loc="left", fontsize=8.4)
-        ax_a.legend(loc="center right", fontsize=6.3, handlelength=1.8)
-        ax_a.set_ylim(bound * 0.985, max(og) * 1.02)
+        ax_a.legend(loc="lower left", fontsize=6.3, handlelength=1.8)
+        ax_a.set_ylim(bound * 0.985, max(og) * 1.035)
         ax_a.annotate(
             "%.0f %% of the gap\nrecovered" % (100.0 * w["gap_recovered_fraction"]),
-            (fs[1], 0.5 * (w["shape_factor_optimal_spline"] + og[1])),
-            fontsize=6.4, color=GREY, ha="center",
+            (fs[-1], 0.5 * (w["shape_factor_optimal_spline"] + og[-1])),
+            fontsize=6.4, color=GREY, ha="right", va="center",
         )
 
         # ---- (b) validation residuals ------------------------------------------------
@@ -105,7 +105,7 @@ def make_figure(path: str | None = None) -> str:
         ax_c.plot(mach, wv_s, "--s", color=BAD, ms=3.2, label="forebody wave term, spline")
         ax_c.set_xlabel("Mach")
         ax_c.set_ylabel("coefficient on S_ref")
-        ax_c.set_title("(c) the term the shape ratio moves", loc="left", fontsize=8.4)
+        ax_c.set_title("(c) the term the ratio moves", loc="left", fontsize=8.4)
         ax_c.legend(loc="upper left", fontsize=6.2, handlelength=1.8)
         ax_c.set_ylim(0.0, max(cd0_o) * 1.28)
         for m, a, b in zip(mach, cd0_o, cd0_s):
@@ -120,7 +120,7 @@ def make_figure(path: str | None = None) -> str:
             % source_label("figures/evidence.json"),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
-        fig.subplots_adjust(left=0.075, right=0.988, top=0.845, bottom=0.135, wspace=0.62)
+        fig.subplots_adjust(left=0.072, right=0.985, top=0.845, bottom=0.135, wspace=0.58)
         path = path or out_path("wavedrag_validation.png")
         fig.savefig(path, dpi=200)
         plt.close(fig)

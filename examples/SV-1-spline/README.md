@@ -29,6 +29,12 @@ volume the optimal shape gives up, and the aft shift in centre of pressure it ca
 than the remaining wave drag saves. The shape trade has a genuine interior optimum, which is
 only visible because the drag model can now see shape at all.
 
+Read the nTop-coupled blend sweep in `05_validation/evidence.json` carefully before quoting this.
+Of the five blends re-measured in nTop, the lowest penalty is at **0.85**, not at the 0.70 the
+search stopped on, and 1.00 is worse than 0.85 on both penalty and launch mass. So the optimum is
+confirmed INTERIOR. The converged blend is NOT confirmed optimal. The five penalties span only
+0.00049, so the objective is nearly flat in this variable and the search had little to follow.
+
 ### The drag saving was not free
 
 `q_max` rose from 193.5 to 199.1 kPa against a 200 kPa structural limit, a margin of 0.44
@@ -65,14 +71,21 @@ calibrated level and Mach dependence stay with the correlation validated against
 free-flight shots; only the shape ratio comes from linear theory. At the ogive shape the ratio is
 exactly 1.0 and CD0 is reproduced bit for bit, asserted with `==` rather than a tolerance.
 
-Validated against two exact closed forms:
+Validated against two exact closed forms. Every residual below is measured, on a 4001-station
+check table, and recorded in `05_validation/validation_summary.csv`:
 
 | check | achieved |
 |---|---|
-| Sears-Haack body, `D/q = 128 V^2 / (pi L^4)` | machine precision |
-| Von Karman ogive, `C_D = (d/L)^2` on base area | 2.1e-5 |
+| Sears-Haack body, `D/q = 128 V^2 / (pi L^4)` | 4.5e-5 |
+| Von Karman ogive, `D/q` against the closed form | 1.3e-5 |
+| Von Karman ogive, `C_D = (d/L)^2` on base area | 1.3e-5 |
+| Optimum Glauert shape factor against `4/pi` | 6.8e-5 |
 | Glauert series against direct double integration | converges onto it |
 | Von Karman ogive IS the constrained optimum | asserted, not assumed |
+
+The Sears-Haack residual belongs to the CHECK TABLE, not to the model: that profile has an
+infinite slope at both ends, so the central-difference derivative converges slowly on it.
+Refining the table from 501 to 8001 stations drives the residual from 1.7e-2 to 1.7e-5.
 
 Measured effect on this vehicle: nose wave drag is 22 percent of CD0 at Mach 1.2 rising to 36
 percent at Mach 4, and the optimal spline nose cuts it 12.5 percent, worth 2.9 to 4.8 percent of
@@ -99,8 +112,9 @@ None of those blocks is in the vendored universe; all go through `Recipe.raw_blo
 `docs/NTOP_NOTES.md` section 25 records the four encoding traps.
 
 Measured OML volume agrees with an independent analytic integral of the same B-spline to
-**+0.0075 percent**. The spline notebook is 154 blocks against 289 for the ogive notebook, and
-measures in 23 to 32 s against 57 s.
+**-0.0064 percent**, and the body wetted area to +0.0148 percent. See
+`05_validation/evidence.json`, section `spline_geometry`. The spline recipe carries 317 body
+nodes against 405 for the ogive recipe.
 
 ## Trade study
 
@@ -126,9 +140,12 @@ Numbered so the reading order is obvious.
 
 | directory | what is in it |
 |---|---|
+| `SV1_spline_engineering_report.pdf` | the write-up: 19 pages, 10 figures, 20 tables. Read this first. |
 | `01_design/` | converged design vector, constraint table, mass statement, the analytic-vs-measured coupling table, source provenance |
 | `02_geometry/` | the `.ntop` notebook regenerated with neutral export paths, plus STL, STEP, `.implicit` and the measurement JSON |
 | `03_trade_study/` | factorial and LHS results as CSV, plus the sensitivity table |
+| `04_figures/` | the ten report figures as PNG |
+| `05_validation/` | `validation_summary.csv` and the machine-readable `evidence.json` behind it |
 
 ## Reproducing
 
@@ -137,14 +154,16 @@ Numbered so the reading order is obvious.
 .venv/Scripts/python.exe run_sv1.py --stage size --oml spline
 .venv/Scripts/python.exe run_sv1.py --stage doe --oml spline
 .venv/Scripts/python.exe run_sv1.py --stage converged --oml spline
+.venv/Scripts/python.exe -m rocketgen.report.evidence --oml spline
+.venv/Scripts/python.exe -m rocketgen.report.fig_oml --oml spline
+.venv/Scripts/python.exe -m rocketgen.report.fig_wavedrag --oml spline
+.venv/Scripts/python.exe -m rocketgen.report.fig_flight --oml spline
+.venv/Scripts/python.exe -m rocketgen.report.build_report_spline
 .venv/Scripts/python.exe scripts/build_example.py --oml spline
 ```
 
 ## What is NOT in this result
 
-- **No figures and no report PDF.** The figure scripts and `report/build_report.py` still read
-  the ogive run layout and were not re-pointed at the spline study. `04_figures/` and the PDF are
-  therefore absent, and `05_validation/` is empty. Everything numeric is present.
 - The nozzle model is still ideal: no two-phase, divergence or combustion loss. Real delivered
   specific impulse for this class runs 3 to 7 percent lower and that penalty is not applied. It
   remains the largest declared optimism in the result.

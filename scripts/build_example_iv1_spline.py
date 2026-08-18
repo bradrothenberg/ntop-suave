@@ -212,8 +212,24 @@ def main() -> int:
     if not os.path.isdir(SPLINE):
         log(f"no spline run at {SPLINE}")
         return 1
+    # Rebuild from scratch so a stale artefact cannot survive, but PRESERVE files this script
+    # does not itself write. The README is hand-authored and lives here; an earlier version of
+    # this function deleted the whole tree and silently destroyed it, which was only noticed
+    # because someone went looking for it. A build step may replace what it produces. It has no
+    # business deleting what it does not.
+    keep = {}
+    for name in ("README.md",):
+        p = os.path.join(EX, name)
+        if os.path.isfile(p):
+            with open(p, "rb") as f:
+                keep[name] = f.read()
     if os.path.isdir(EX):
         shutil.rmtree(EX)
+    os.makedirs(EX, exist_ok=True)
+    for name, body in keep.items():
+        with open(os.path.join(EX, name), "wb") as f:
+            f.write(body)
+        log(f"preserved {name}")
     d_design = os.path.join(EX, "01_design")
     d_geom = os.path.join(EX, "02_geometry")
     d_base = os.path.join(EX, "03_ogive_baseline")
