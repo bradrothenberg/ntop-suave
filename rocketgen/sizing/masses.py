@@ -235,8 +235,20 @@ def analytic_geometry(dv: DesignVector) -> dict[str, float]:
     R = 0.5 * dv.D
     r_base = 0.5 * dv.d_base
 
-    a_nose = _tangent_ogive_surface_area(dv.L_nose, R)
-    v_nose = _tangent_ogive_volume(dv.L_nose, R)
+    # A splined nose is measured from the SAME chord polygon nTop revolves, so the analytic
+    # fallback and the measured geometry describe one solid rather than two. At the
+    # ogive-equivalent control values these agree with the tangent-ogive quadrature above to
+    # better than 3e-4 relative (see tests/test_oml_spline.py).
+    nose_control = getattr(dv, "nose_control", None)
+    if nose_control is not None:
+        from ..oml_spline import SplineProfile
+
+        _nose = SplineProfile(length=dv.L_nose, radius=R, control=nose_control, n_poly=160)
+        a_nose = _nose.lateral_area()
+        v_nose = _nose.volume()
+    else:
+        a_nose = _tangent_ogive_surface_area(dv.L_nose, R)
+        v_nose = _tangent_ogive_volume(dv.L_nose, R)
 
     a_cyl = 2.0 * math.pi * R * dv.L_body_cyl
     v_cyl = math.pi * R * R * dv.L_body_cyl

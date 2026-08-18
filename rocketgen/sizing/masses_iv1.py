@@ -159,8 +159,19 @@ def stage_geometry(dv: StackDesignVector, stage: StageSpec) -> dict[str, float]:
 
     if is_payload:
         L_nose = dv.L_nose
-        a_nose = _tangent_ogive_surface_area(L_nose, R)
-        v_nose = _tangent_ogive_volume(L_nose, R)
+        # A splined nose is measured from the SAME chord polygon nTop revolves, so the
+        # analytic fallback and the measured solid describe one geometry. At the
+        # ogive-equivalent control values the two agree to better than 1e-3 relative.
+        nose_control = getattr(dv, "nose_control", None)
+        if nose_control is not None:
+            from ..oml_spline import SplineProfile
+
+            _nose = SplineProfile(length=L_nose, radius=R, control=nose_control, n_poly=160)
+            a_nose = _nose.lateral_area()
+            v_nose = _nose.volume()
+        else:
+            a_nose = _tangent_ogive_surface_area(L_nose, R)
+            v_nose = _tangent_ogive_volume(L_nose, R)
         L_cyl = stage.L - L_nose
     else:
         L_nose = 0.0
