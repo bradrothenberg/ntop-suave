@@ -18,10 +18,54 @@ matplotlib.use("Agg")
 
 from ..config import RUNS_DIR  # noqa: E402
 
+#: Which SV-1 study the figure scripts read. `select_study("spline")` re-points every path at
+#: `runs/SV-1_spline`, so the same figure code serves both outer-mould-line families and the
+#: ogive figures are never overwritten. Same pattern as `scripts/build_example.py::select_study`.
+OML = "ogive"
+
 CASE_DIR = os.path.join(RUNS_DIR, "SV-1")
 CONVERGED_DIR = os.path.join(CASE_DIR, "converged")
 DOE_DIR = os.path.join(CASE_DIR, "doe")
 FIG_DIR = os.path.join(CASE_DIR, "figures")
+
+
+def select_study(oml: str) -> None:
+    """Point every figure path at the ogive study or the spline study.
+
+    Call this BEFORE any figure module reads a path. Modules must therefore call the accessor
+    functions below rather than importing `DOE_DIR` and friends by value: a `from .figstyle
+    import DOE_DIR` binds the string at import time and would not see this rebinding.
+    """
+    global OML, CASE_DIR, CONVERGED_DIR, DOE_DIR, FIG_DIR
+    if oml not in ("ogive", "spline"):
+        raise ValueError(f"unknown oml family {oml!r}")
+    OML = oml
+    CASE_DIR = os.path.join(RUNS_DIR, "SV-1_spline" if oml == "spline" else "SV-1")
+    CONVERGED_DIR = os.path.join(CASE_DIR, "converged")
+    DOE_DIR = os.path.join(CASE_DIR, "doe")
+    FIG_DIR = os.path.join(CASE_DIR, "figures")
+
+
+def case_dir() -> str:
+    return CASE_DIR
+
+
+def converged_dir() -> str:
+    return CONVERGED_DIR
+
+
+def doe_dir() -> str:
+    return DOE_DIR
+
+
+def fig_dir() -> str:
+    return FIG_DIR
+
+
+def source_label(name: str) -> str:
+    """Path of a run artefact as it should be QUOTED in a figure footer, relative to the repo."""
+    return f"runs/{os.path.basename(CASE_DIR)}/{name}"
+
 
 #: Same rcParams as fig_aero.py, so the whole report shares one look.
 STYLE: dict[str, Any] = {
@@ -93,6 +137,10 @@ def measurements() -> dict[str, Any]:
 
 def sensitivity() -> dict[str, Any]:
     return load_json(os.path.join(DOE_DIR, "sensitivity.json"))
+
+
+def lhs_meta() -> dict[str, Any]:
+    return load_json(os.path.join(DOE_DIR, "lhs.json"))
 
 
 def evidence() -> dict[str, Any]:

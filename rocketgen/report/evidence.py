@@ -42,9 +42,26 @@ from ..config import (
     Requirements,
 )
 
-CONVERGED_DIR = os.path.join(RUNS_DIR, "SV-1", "converged")
-FIG_DIR = os.path.join(RUNS_DIR, "SV-1", "figures")
+#: Which SV-1 study is being described. `select_study("spline")` re-points every path at
+#: `runs/SV-1_spline`. Same pattern as `figstyle.select_study` and `build_example.select_study`.
+OML = "ogive"
+CASE_DIR = os.path.join(RUNS_DIR, "SV-1")
+CONVERGED_DIR = os.path.join(CASE_DIR, "converged")
+FIG_DIR = os.path.join(CASE_DIR, "figures")
 EVIDENCE_JSON = os.path.join(FIG_DIR, "evidence.json")
+
+
+def select_study(oml: str) -> None:
+    """Point the evidence collector at the ogive study or the spline study."""
+    global OML, CASE_DIR, CONVERGED_DIR, FIG_DIR, EVIDENCE_JSON
+    if oml not in ("ogive", "spline"):
+        raise ValueError(f"unknown oml family {oml!r}")
+    OML = oml
+    CASE_DIR = os.path.join(RUNS_DIR, "SV-1_spline" if oml == "spline" else "SV-1")
+    CONVERGED_DIR = os.path.join(CASE_DIR, "converged")
+    FIG_DIR = os.path.join(CASE_DIR, "figures")
+    EVIDENCE_JSON = os.path.join(FIG_DIR, "evidence.json")
+
 
 #: Terminal-propellant loadings for the sweep, kg. 0 is the unpowered dive; 40 is the converged
 #: design; the bounds come from DesignVector.bounds()["m_p_terminal"].
@@ -444,9 +461,435 @@ def motor_operating_point() -> dict[str, Any]:
 # --------------------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------------------
+#   7. The splined outer mould line
+#
+#   Only collected when the study under description is the spline study. None of it is
+#   meaningful for the tangent-ogive study, where every shape ratio is 1.0 by construction.
+# --------------------------------------------------------------------------------------
+
+
+#: `nose_blend` values for the shape trade. 0.0 is the ogive-equivalent spline, 1.0 is the
+#: slender-body drag optimum, and 0.7 is where the sizing search stopped.
+NOSE_BLEND_SWEEP: tuple[float, ...] = (0.0, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 1.0)
+
+#: Mach numbers at which the drag build-up is decomposed. 1.2 is the top of the transonic
+#: blend, so it is the lowest Mach at which the wave-drag term is physics.
+SHAPE_MACH: tuple[float, ...] = (1.2, 2.0, 3.0, 4.0)
+
+
+def wave_drag_validation() -> dict[str, Any]:
+    """Residuals of `sizing/wavedrag.py` against closed forms that are outside this repo.
+
+    Every row is MEASURED here, not transcribed from the test file. The tests assert bounds;
+    the report quotes what the code actually achieves.
+    """
+    from ..oml_spline import (
+        SplineProfile,
+        ogive_control_values,
+        tangent_ogive_radius,
+        von_karman_radius,
+    )
+    from ..sizing import wavedrag as W
+
+    # 4001 stations, the same grid `tests/test_wavedrag.py::_area_table` uses, so the residual
+    # quoted in the report is the residual the test asserts against and not a different number.
+    def area_table(radius_of_t, length: float, radius: float, n: int = 4001):
+        xs = [length * i / (n - 1) for i in range(n)]
+        areas = [math.pi * (radius * radius_of_t(x / length)) ** 2 for x in xs]
+        return xs, areas
+
+    # (a) Sears-Haack: D/q = 128 V^2 / (pi L^4), an exact published result.
+    L, R = 3.0, 0.5
+    sears_haack_radius = lambda u: (4.0 * u * (1.0 - u)) ** 0.75      # noqa: E731
+    xs, areas = area_table(sears_haack_radius, L, R)
+    volume = 3.0 * math.pi ** 2 * R * R * L / 16.0
+    sh_series = W.wave_drag_over_q(xs, areas, L)
+    sh_closed = W.sears_haack_drag_over_q(volume, L)
+
+    # The Sears-Haack profile has an infinite slope at both ends, so the central-difference
+    # S'(x) in `glauert_coefficients` converges slowly on it. The refinement study says the
+    # residual belongs to the CHECK TABLE, not to the model, which a single number cannot.
+    sh_refine = []
+    for n in (501, 1001, 2001, 4001, 8001):
+        x_n, a_n = area_table(sears_haack_radius, L, R, n=n)
+        sh_refine.append({
+            "n_stations": n,
+            "rel_err": W.wave_drag_over_q(x_n, a_n, L) / sh_closed - 1.0,
+        })
+
+    # (b) von Karman ogive: C_D on base area = (d/L)^2.
+    L2, R2 = 2.1, 0.175
+    xs, areas = area_table(von_karman_radius, L2, R2)
+    vk_series = W.wave_drag_over_q(xs, areas, L2)
+    vk_closed = W.von_karman_ogive_drag_over_q(2.0 * R2, L2)
+    vk_cd_on_base = vk_series / (math.pi * R2 * R2)
+
+    # (c) the fineness-free statement of the same result: shape factor of the optimum = 4/pi.
+    sf_vk = W.shape_factor(von_karman_radius)
+
+    # (d) the Glauert series constant pi/4, against direct double integration. The deleted
+    #     diagonal converges slowly, so what is measured is CONVERGENCE ONTO the series.
+    coeffs = [0.4, 0.3, -0.15, 0.05]
+    series = (math.pi / 4.0) * sum((n + 1) * a * a for n, a in enumerate(coeffs))
+
+    def drag_direct(n: int) -> float:
+        th = [(i + 0.5) * math.pi / n for i in range(n)]
+        dth = math.pi / n
+        g = [sum((m + 1) * a * math.cos((m + 1) * t) for m, a in enumerate(coeffs)) for t in th]
+        c = [math.cos(t) for t in th]
+        total = 0.0
+        for i in range(n):
+            gi, ci = g[i], c[i]
+            for j in range(n):
+                if i == j:
+                    continue
+                total += gi * g[j] * math.log(abs(ci - c[j]) * 3.0 / 2.0)
+        return -total * dth * dth / (2.0 * math.pi)
+
+    direct = [{"n": n, "rel_err": abs(drag_direct(n) / series - 1.0)} for n in (250, 500, 1000)]
+
+    # (e) the optimum really is an optimum: adding any higher Glauert mode at fixed base area
+    #     can only raise the drag, because base area is set by A_1 alone.
+    def drag_of(a: list[float]) -> float:
+        return (math.pi / 4.0) * sum((n + 1) * v * v for n, v in enumerate(a))
+
+    optimality = [
+        {
+            "modes": str(extra),
+            "drag": drag_of(extra),
+            "raises": drag_of(extra) > drag_of([0.4]),
+        }
+        for extra in ([0.4, 0.02], [0.4, 0.0, 0.02], [0.4, -0.05], [0.4, 0.01, 0.01, 0.01])
+    ]
+
+    # (f) what the tangent ogive costs, and how much of it a 9-point spline gets back.
+    n_ctrl = 9
+    sf_ogive = W.shape_factor_of_control(ogive_control_values(6.0, n_ctrl))
+    sf_opt = W.shape_factor_of_control(W.optimal_control_values(n_ctrl))
+    penalty = [
+        {
+            "f_nose": f,
+            "sf_over_bound": W.shape_factor(
+                lambda t, f=f: tangent_ogive_radius(t, 2.0 * f)
+            ) / sf_vk,
+        }
+        for f in (2.0, 3.0, 4.0, 5.0)
+    ]
+
+    # (g) the optimal shape is still a usable nose, not merely a low number.
+    p_opt = SplineProfile(length=1.19, radius=0.175, control=W.optimal_control_values(n_ctrl))
+
+    return {
+        "sears_haack": {"series": sh_series, "closed_form": sh_closed,
+                        "rel_err": sh_series / sh_closed - 1.0, "L": L, "R": R,
+                        "n_stations": 4001, "refinement": sh_refine},
+        "von_karman": {"series": vk_series, "closed_form": vk_closed,
+                       "rel_err": vk_series / vk_closed - 1.0,
+                       "cd_on_base": vk_cd_on_base,
+                       "cd_on_base_closed": (2.0 * R2 / L2) ** 2,
+                       "cd_rel_err": vk_cd_on_base / ((2.0 * R2 / L2) ** 2) - 1.0,
+                       "L": L2, "R": R2},
+        "von_karman_shape_factor": {"measured": sf_vk, "closed_form": 4.0 / math.pi,
+                                    "rel_err": sf_vk / (4.0 / math.pi) - 1.0},
+        "glauert_direct": direct,
+        "optimality": optimality,
+        "n_ctrl": n_ctrl,
+        "shape_factor_ogive": sf_ogive,
+        "shape_factor_optimal_spline": sf_opt,
+        "shape_factor_bound": sf_vk,
+        "ogive_penalty_over_bound": sf_ogive / sf_vk,
+        "spline_over_bound": sf_opt / sf_vk,
+        "gap_recovered_fraction": (sf_ogive - sf_opt) / (sf_ogive - sf_vk),
+        "ogive_penalty_by_fineness": penalty,
+        "optimal_is_monotone": p_opt.is_monotone(),
+        "optimal_max_slope": p_opt.max_slope(),
+    }
+
+
+def nose_shape_trade() -> dict[str, Any]:
+    """Sweep `nose_blend` at the converged design and record what each blend costs and buys.
+
+    This is the evidence behind the headline result that the sizing search STOPPED SHORT of
+    the drag optimum. Each row carries the drag saving, the forebody volume given up, the
+    centre-of-pressure shift, and the flown result of the whole loop.
+
+    The loop rows run with analytic geometry, because 8 nTop measurements would cost about
+    4 minutes and the question here is the trend, not the absolute level. The converged row
+    of the real, nTop-coupled result is reported beside it so the offset is visible.
+    """
+    from ..oml_spline import SplineProfile
+    from ..sizing.aero import RocketAero
+    from ..sizing.loop import CalibratedAero, converge_point, penalty
+    from ..sizing.wavedrag import nose_wave_shape_ratio
+
+    point = load_point("point_ntop.json")
+    base = design_vector_from(point["design_vector"])
+    if getattr(base, "nose_control", None) is None:
+        return {"applicable": False,
+                "reason": "the converged design has no splined nose, so there is no trade"}
+    reqs = Requirements()
+    R = 0.5 * base.D
+    k = base.L_nose / R
+
+    rows: list[dict[str, Any]] = []
+    for blend in NOSE_BLEND_SWEEP:
+        dv = base.replace(nose_blend=float(blend))
+        control = dv.nose_control
+        profile = SplineProfile(length=dv.L_nose, radius=R, control=control)
+        aero = CalibratedAero(RocketAero(dv, nose_shape=dv.nose_shape),
+                              factor=CD0_CALIBRATION)
+        res = converge_point(dv, reqs, geometry_fn=None, max_iter=2, dt=0.06, adaptive=True)
+        row: dict[str, Any] = {
+            "nose_blend": float(blend),
+            "shape_ratio": nose_wave_shape_ratio(control, k),
+            "nose_volume_m3": profile.volume(),
+            "nose_wetted_m2": profile.lateral_area(),
+            "max_slope": profile.max_slope(),
+            "monotone": profile.is_monotone(),
+            "m0_kg": res.masses.total if res.masses is not None else None,
+            "range_km": res.traj.range_final / 1000.0 if res.traj is not None else None,
+            "mach_terminal": res.traj.mach_final if res.traj is not None else None,
+            "q_max_kPa": res.traj.q_max / 1000.0 if res.traj is not None else None,
+            "feasible": res.feasible,
+            # The search minimises THIS, not the launch mass. Recording it is what lets the
+            # report say whether the shape trade has an interior optimum or not.
+            "penalty": penalty(res, reqs),
+            "violations": [c.name for c in res.constraints if not c.met],
+        }
+        for mach in SHAPE_MACH:
+            r = aero.evaluate(mach, 12_000.0, math.radians(2.0))
+            row[f"CD0_M{mach:g}"] = r.CD0
+            row[f"xcp_M{mach:g}"] = r.x_cp
+        rows.append(row)
+
+    ref = next(r for r in rows if r["nose_blend"] == 0.0)
+    for r in rows:
+        r["d_nose_volume_pct"] = 100.0 * (r["nose_volume_m3"] / ref["nose_volume_m3"] - 1.0)
+        r["d_nose_wetted_pct"] = 100.0 * (r["nose_wetted_m2"] / ref["nose_wetted_m2"] - 1.0)
+        for mach in SHAPE_MACH:
+            r[f"d_CD0_pct_M{mach:g}"] = 100.0 * (
+                r[f"CD0_M{mach:g}"] / ref[f"CD0_M{mach:g}"] - 1.0
+            )
+            r[f"d_xcp_mm_M{mach:g}"] = 1000.0 * (r[f"xcp_M{mach:g}"] - ref[f"xcp_M{mach:g}"])
+
+    # The nose wave-drag share of CD0, which is what the shape ratio multiplies.
+    ogive = RocketAero(base.replace(nose_shape="tangent_ogive", nose_blend=0.0),
+                       nose_shape="tangent_ogive")
+    spline = RocketAero(base, nose_shape=base.nose_shape)
+    share = []
+    for mach in SHAPE_MACH:
+        ro = ogive.evaluate(mach, 12_000.0, math.radians(2.0))
+        rs = spline.evaluate(mach, 12_000.0, math.radians(2.0))
+        bo, bs = ro.breakdown, rs.breakdown
+        cd0_o, cd0_s = ro.CD0, rs.CD0
+        share.append({
+            "mach": mach,
+            "cd_wave_body_ogive": bo["CD_wave_body"],
+            "cd_wave_body_spline": bs["CD_wave_body"],
+            "wave_share_of_cd0_ogive": bo["CD_wave_body"] / cd0_o,
+            "cd0_ogive": cd0_o,
+            "cd0_spline": cd0_s,
+            "d_cd0_pct": 100.0 * (cd0_s / cd0_o - 1.0),
+            "d_wave_pct": 100.0 * (bs["CD_wave_body"] / bo["CD_wave_body"] - 1.0),
+        })
+
+    return {
+        "applicable": True,
+        "k_L_over_R": k,
+        "converged_nose_blend": float(base.nose_blend),
+        "converged_boattail_blend": float(base.boattail_blend),
+        "rows": rows,
+        "wave_share": share,
+        # The real, nTop-coupled converged numbers, for the offset against the analytic rows.
+        "coupled": {
+            "m0_kg": point["mass_statement"]["total_kg"],
+            "range_km": point["trajectory"]["range_m"] / 1000.0,
+            "mach_terminal": point["trajectory"]["mach_final"],
+            "q_max_kPa": point["trajectory"]["q_max_Pa"] / 1000.0,
+        },
+    }
+
+
+#: Blends for the nTop-COUPLED sweep. Fewer points than the analytic sweep, because each one
+#: costs two `measure_rocket` calls of about 25 to 35 s. The set brackets the converged 0.7 and
+#: reaches the drag optimum at 1.0, which is the only comparison the interior-optimum claim needs.
+NOSE_BLEND_COUPLED: tuple[float, ...] = (0.0, 0.5, 0.7, 0.85, 1.0)
+
+
+def nose_shape_trade_coupled() -> dict[str, Any]:
+    """The same blend sweep, with nTop measuring every shape.
+
+    This exists because the analytic sweep CANNOT answer the question the result turns on.
+    The analytic mass model reads a closed form of the outer mould line, so a blend that gives
+    up forebody volume changes the airframe mass only through that closed form. The measured
+    model rebuilds and re-measures the solid. If the shape trade has an interior optimum, this
+    sweep is where it appears.
+
+    Returns `available: False`, with the reason, when nTop cannot be reached. The report then
+    says the sweep is missing rather than quoting the analytic sweep as if it were this one.
+    """
+    from ..sizing.loop import converge_point, penalty
+
+    point = load_point("point_ntop.json")
+    base = design_vector_from(point["design_vector"])
+    if getattr(base, "nose_control", None) is None:
+        return {"available": False, "reason": "the converged design has no splined nose"}
+
+    try:
+        from ..ntopgen.rocket_notebook import measure_rocket
+    except Exception as exc:                                   # noqa: BLE001
+        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+    run_dir = os.path.join(CASE_DIR, "shape_trade")
+    reqs = Requirements()
+    rows: list[dict[str, Any]] = []
+    for blend in NOSE_BLEND_COUPLED:
+        dv = base.replace(nose_blend=float(blend))
+        t0 = time.perf_counter()
+        try:
+            res = converge_point(dv, reqs, geometry_fn=measure_rocket, run_dir=run_dir,
+                                 max_iter=2, dt=0.05, adaptive=True)
+        except Exception as exc:                               # noqa: BLE001
+            # Never swallow: a blend that fails becomes a visible row, not a missing one.
+            rows.append({"nose_blend": float(blend), "failed": f"{type(exc).__name__}: {exc}"})
+            continue
+        rows.append({
+            "nose_blend": float(blend),
+            "geometry_measured": res.geometry_measured,
+            "m0_kg": res.masses.total if res.masses is not None else None,
+            "x_cg_m": res.masses.x_cg if res.masses is not None else None,
+            "volume_total": res.meas.volume_total if res.meas is not None else None,
+            "volume_cavity": res.meas.volume_cavity if res.meas is not None else None,
+            "mass_structure": res.meas.mass_structure if res.meas is not None else None,
+            "area_wetted_body": res.meas.area_wetted_body if res.meas is not None else None,
+            "range_km": res.traj.range_final / 1000.0 if res.traj is not None else None,
+            "mach_terminal": res.traj.mach_final if res.traj is not None else None,
+            "q_max_kPa": res.traj.q_max / 1000.0 if res.traj is not None else None,
+            "static_margin": next(
+                (c.value for c in res.constraints if c.name == "R10 static margin"), None
+            ),
+            "feasible": res.feasible,
+            "penalty": penalty(res, reqs),
+            "violations": [c.name for c in res.constraints if not c.met],
+            "wall_time_s": time.perf_counter() - t0,
+        })
+
+    good = [r for r in rows if r.get("penalty") is not None]
+    best = min(good, key=lambda r: r["penalty"]) if good else None
+    return {
+        "available": True,
+        "rows": rows,
+        "n_failed": sum(1 for r in rows if "failed" in r),
+        "best_blend_by_penalty": best["nose_blend"] if best else None,
+        "interior_optimum": (
+            best is not None and 0.0 < best["nose_blend"] < 1.0
+        ),
+    }
+
+
+def search_record() -> dict[str, Any]:
+    """What the sizing search actually did, read back from its own trace.
+
+    The trace is the only record of the search, and it does NOT carry every searched variable.
+    That is recorded here rather than assumed, because the shape blends are searched last and
+    a reader who does not know they are missing from the trace will draw the wrong conclusion.
+    """
+    import csv as _csv
+
+    path = os.path.join(CASE_DIR, "size", "search_trace.csv")
+    if not os.path.isfile(path):
+        return {"available": False, "reason": f"no search trace at {path}"}
+    with open(path, encoding="utf-8") as f:
+        rows = list(_csv.DictReader(f))
+    columns = list(rows[0].keys()) if rows else []
+    dv_fields = set(DesignVector.__dataclass_fields__)
+    searched_but_untraced = [
+        n for n in ("nose_blend", "boattail_blend")
+        if n in dv_fields and n not in columns
+    ]
+    best = None
+    for r in rows:
+        if r.get("feasible") == "1.0" or r.get("feasible") == "1":
+            v = float(r["m0"])
+            if best is None or v < best[0]:
+                best = (v, r)
+    return {
+        "available": True,
+        "path": f"runs/{os.path.basename(CASE_DIR)}/size/search_trace.csv",
+        "n_evaluations": len(rows),
+        "columns": columns,
+        "variables_searched_but_not_traced": searched_but_untraced,
+        "n_feasible_in_trace": sum(
+            1 for r in rows if r.get("feasible") in ("1", "1.0")
+        ),
+        "best_traced_m0_kg": best[0] if best else None,
+    }
+
+
+def spline_geometry_check() -> dict[str, Any]:
+    """The measured nTop outer-mould-line volume against the exact integral of the B-spline.
+
+    nTop revolves the spline itself, so `SplineProfile.volume` is an EXACT description of the
+    solid rather than an approximation of it. That makes this a real check of the notebook,
+    not a check of a discretisation.
+    """
+    from ..oml_spline import SplineProfile
+
+    point = load_point("point_ntop.json")
+    dv = design_vector_from(point["design_vector"])
+    measured = point["ntop_measurements"]
+    R = 0.5 * dv.D
+    r_base = 0.5 * dv.d_base
+
+    nose_control = getattr(dv, "nose_control", None)
+    boattail_control = getattr(dv, "boattail_control", None)
+    if nose_control is None:
+        return {"applicable": False, "reason": "no splined nose in this design"}
+
+    nose = SplineProfile(length=dv.L_nose, radius=R, control=nose_control)
+    v_nose = nose.volume()
+    a_nose = nose.lateral_area()
+    v_cyl = math.pi * R * R * dv.L_body_cyl
+    a_cyl = 2.0 * math.pi * R * dv.L_body_cyl
+    if boattail_control is not None:
+        # Run expressed on the contraction: control points are R + (r_base - R) * c_i, so the
+        # SplineProfile end radius is r_base and it starts at R.
+        boat = SplineProfile(length=dv.L_boattail, radius=r_base,
+                             control=boattail_control, r0_over_r=R / r_base)
+        v_boat, a_boat = boat.volume(), boat.lateral_area()
+        boat_form = "splined contraction, exact integral"
+    else:
+        slant = math.hypot(dv.L_boattail, R - r_base)
+        a_boat = math.pi * (R + r_base) * slant
+        v_boat = math.pi * dv.L_boattail * (R * R + R * r_base + r_base * r_base) / 3.0
+        boat_form = "straight cone, closed form"
+
+    v_closed = v_nose + v_cyl + v_boat
+    a_closed = a_nose + a_cyl + a_boat
+    return {
+        "applicable": True,
+        "volume_ntop": measured["volume_total"],
+        "volume_closed_form": v_closed,
+        "volume_rel_err": measured["volume_total"] / v_closed - 1.0,
+        "area_ntop": measured["area_wetted_body"],
+        "area_closed_form": a_closed,
+        "area_rel_err": measured["area_wetted_body"] / a_closed - 1.0,
+        "parts": {"nose": v_nose, "cylinder": v_cyl, "boattail": v_boat},
+        "boattail_form": boat_form,
+        "wall_time_s": measured.get("wall_time_s"),
+        "note": (
+            "The closed form is the exact integral of the same B-spline nTop revolves, so a "
+            "discretisation error is not available to hide behind."
+        ),
+    }
+
+
 def collect() -> dict[str, Any]:
     t0 = time.perf_counter()
     payload: dict[str, Any] = {
+        "oml_family": OML,
+        "case_dir": os.path.basename(CASE_DIR),
         "integrator": integrator_residuals(),
         "aero": aero_validation(),
         "ntop": ntop_versus_closed_form(),
@@ -454,6 +897,12 @@ def collect() -> dict[str, Any]:
         "terminal_sweep": terminal_propellant_sweep(),
         "motor": motor_operating_point(),
     }
+    if OML == "spline":
+        payload["wavedrag"] = wave_drag_validation()
+        payload["shape_trade"] = nose_shape_trade()
+        payload["shape_trade_coupled"] = nose_shape_trade_coupled()
+        payload["spline_geometry"] = spline_geometry_check()
+        payload["search"] = search_record()
     payload["wall_time_s"] = time.perf_counter() - t0
     return payload
 
@@ -472,4 +921,11 @@ def load(path: str | None = None) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                    help="which study to describe; spline reads runs/SV-1_spline")
+    _args = ap.parse_args()
+    select_study(_args.oml)
     print(write())
