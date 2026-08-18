@@ -233,10 +233,23 @@ touching `ntopgen/`. The headline traps:
 5. **Input templates report display units, output JSON reports SI.** `-t` returns a 0.025 m default
    as `{"units": "mm", "value": 25.0}`. The driver always writes units explicitly to avoid this.
 
-6. **The block universe drifts from the installed nTop version.** Signatures carry a trailing
+6. **The block universe drifts from the installed nTop version, and it is missing whole BLOCKS
+   and whole TYPES, not merely stale revisions.** Signatures carry a trailing
    `[maj.min.patch]`; `Universe.latest()` sorts them numerically, not lexically. Some blocks are
    accepted by `ntopcl` but absent from the universe file, and at least one is marked current but
    rejected. `recipe.BLOCK_REVISION_OVERRIDES` and `Recipe.raw_block` are the escape hatches.
+
+   **"Not in `functions.json`" is NOT evidence that nTop cannot do something.** This cost real
+   work. The spline OML was first built by sampling the spline into a chord polygon, because the
+   universe lists no route from a curve to a revolvable profile and that was taken as proof no
+   such route existed. It was not proof: nTop revolves splines directly, through four blocks and
+   four types that are all absent from the vendored export. See `docs/NTOP_NOTES.md` section 25
+   for the chain and the four encoding traps. Check the GUI, or `exportjson` a notebook that
+   uses the block, before concluding a capability is missing.
+
+   And do not guess block ids when `convert` rejects one: 27 plausible combinations were tried
+   and all failed. `exportjson` a real notebook and read the `func` strings out of it, then
+   build the chain up one block at a time so `convert` isolates the offending one.
 
 7. **Trust the notebook's own measurements over the exported mesh.** On a 25 mm sphere the
    notebook's `mass_properties` was accurate to 0.0104 percent and the STL to 0.169 percent.
@@ -353,6 +366,8 @@ much weaker than it sounds. Say how many were checked.
 | Atmospheric values disagree with the published tables by a few percent | US Standard 1976 is tabulated against GEOPOTENTIAL altitude; SUAVE takes GEOMETRIC. Convert before comparing: `H = r0*z/(r0+z)` with `r0 = 6356766` m. 47 km geometric is 46.655 km geopotential. This looked like a 4 percent model defect and was a comparison error. |
 | A cached-table lookup is unexpectedly slow | `np.interp` binary-searches per field per call. If the grid is uniform, use index arithmetic: it is exact, and it took the atmosphere lookup from 95 us back to 3.5 us. |
 | A path-scrubbing or text-rewriting script reports success but the strings are still there | Shell escaping mangled the pattern. Verify with `grep`, not with the script's own message. This defeated two attempts in a row. |
+| `ntopcl convert` says only `Error loading recipe:` with no detail | A block id or a literal encoding is wrong, and it will not tell you which. Build the graph up one block at a time, converting after each; the first failure names the culprit. |
+| A geometry approach looks impossible because the block does not exist | The vendored universe is incomplete. See section 4 point 6. |
 | A wall-clock timing test fails intermittently | Concurrent agents saturate the CPU. Confirm in isolation before believing it. |
 
 ---
