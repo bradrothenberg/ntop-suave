@@ -116,20 +116,94 @@ def comparison_csv(og: dict, sp: dict, path: str) -> None:
     log(f"wrote {os.path.relpath(path, REPO)}")
 
 
+def regenerate_notebook(dest_dir: str) -> bool:
+    """Convert a fresh IV-1 notebook whose export paths are neutral. True on success.
+
+    REGENERATED, never copied from `runs/_ntop_cache/`. CLAUDE.md section 11: a converted
+    notebook bakes its export destinations in as absolute `file_path` literals, so the cached
+    copy carries the developer's directory layout INSIDE THE BINARY, where no text scrub will
+    ever find it. Rebuilding with a relative export directory keeps that out of the artefact.
+
+    This is also the most valuable single file in the example: it is the parametric model, and
+    a reader can open it in nTop and move the design variables. Shipping the measurements
+    without it would be shipping the answer without the question.
+    """
+    try:
+        from rocketgen.config_iv1 import default_iv1
+        from rocketgen.ntopgen.driver import NtopRunner
+        from rocketgen.ntopgen.stack_notebook import build_stack_recipe
+
+        conv = json.load(open(os.path.join(SPLINE, "converged.json"), encoding="utf-8"))
+        raw = conv.get("design_vector") or {}
+        dv = default_iv1().replace(
+            nose_shape=raw.get("nose_shape", "spline"),
+            nose_blend=float(raw.get("nose_blend", 1.0)),
+            interstage_shape=raw.get("interstage_shape", "spline"),
+            interstage_blend=float(raw.get("interstage_blend", 1.0)),
+        )
+
+        # "exports" is RELATIVE, so the literals baked into the binary say nothing about this
+        # machine. An nTop user retargets them from the notebook inputs anyway.
+        recipe = build_stack_recipe(dv, "exports", export_stl=True, area_stations=16)
+        recipe_path = os.path.join(dest_dir, "iv1_recipe.json")
+        recipe.write_json(recipe_path)
+        with open(recipe_path, "r", encoding="utf-8") as f:
+            body = f.read()
+        with open(recipe_path, "w", encoding="utf-8") as f:
+            f.write(scrub_text(body))
+        log(f"wrote {os.path.relpath(recipe_path, REPO)}")
+
+        runner = NtopRunner()
+        out = os.path.join(dest_dir, "iv1.ntop")
+        runner.convert(recipe_path, out, timeout=1800)
+        log(f"regenerated iv1.ntop with neutral export paths "
+            f"({os.path.getsize(out)/1e6:.1f} MB)")
+
+        # The driver writes a convert log beside the output. It records the full command line,
+        # so it carries this machine's paths and is of no value to a reader.
+        for junk in ("iv1_convert.log", "ntopcl_convert.log", "ntopcl_run.log"):
+            jp = os.path.join(dest_dir, junk)
+            if os.path.isfile(jp):
+                os.remove(jp)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        log(f"could not regenerate the notebook: {type(exc).__name__}: {exc}")
+        return False
+
+
 def verify_scrub(root: str) -> int:
-    """Search the written files. NEVER trust the copy step's own success message."""
+    """Search EVERY written file, text and binary alike.
+
+    Binaries are the point. A `.ntop` is a binary container that bakes absolute export paths
+    into itself, so it is exactly the file most likely to carry a developer path and the one a
+    text-only check would skip. An earlier version of this function skipped every extension it
+    did not recognise, which meant the notebook was never checked at all.
+
+    NEVER trust the copy step's own success message (CLAUDE.md section 6).
+    """
+    The needles are MACHINE-IDENTIFYING TOKENS, not path punctuation. A drive-letter pattern
+    like "D:/" fires constantly on packed float data - "Y@L:/>Q", "6@c:/>" are real hits from a
+    real .ntop - and a scanner that cries wolf on every binary is a scanner nobody reads. These
+    tokens cannot occur by chance.
+
+    A relative "runs/_ntop_cache/..." is deliberately NOT a needle: it points inside the repo
+    and names no machine.
+    """
     bad = 0
-    needles = ("nTop_Suave", "bradrothenberg", "C:\\Users", "D:\\cplusplus")
+    needles = (b"nTop_Suave", b"bradrothenberg", b"cplusplus", b"worktrees",
+               b"AppData", b"Users", b"Program Files")
     for r, _, names in os.walk(root):
         for n in names:
-            if os.path.splitext(n)[1].lower() not in (".json", ".csv", ".md", ".txt"):
-                continue
             p = os.path.join(r, n)
-            with open(p, "r", encoding="utf-8", errors="ignore") as f:
+            with open(p, "rb") as f:
                 body = f.read()
             for needle in needles:
                 if needle in body:
                     log(f"SCRUB FAILED: {needle!r} still in {os.path.relpath(p, REPO)}")
+                    bad += 1
+                # a .ntop stores some literals as UTF-16, which an ASCII byte search misses
+                if needle.decode("ascii").encode("utf-16-le") in body:
+                    log(f"SCRUB FAILED (utf-16): {needle!r} in {os.path.relpath(p, REPO)}")
                     bad += 1
     return bad
 
@@ -162,12 +236,16 @@ def main() -> int:
     if og is not None:
         comparison_csv(og, sp, os.path.join(EX, "ogive_vs_spline.csv"))
 
-    # geometry: whatever the last stack measurement wrote
+    # geometry: the measurement JSON the stack notebook wrote...
     geom = os.path.join(SPLINE, "geom")
     if os.path.isdir(geom):
         for n in sorted(os.listdir(geom)):
-            if n.endswith((".stl", ".ntop", ".json")) and not n.startswith("input"):
+            if n.endswith((".stl", ".json")) and not n.startswith("input"):
                 copy_scrubbed(os.path.join(geom, n), d_geom)
+    # ...and the notebook itself, REGENERATED. It lives in `runs/_ntop_cache/`, not beside the
+    # measurements, so a glob over the run directory silently ships an example with no
+    # parametric model in it. That is what happened on the first pass here.
+    regenerate_notebook(d_geom)
 
     bad = verify_scrub(EX)
     total = sum(os.path.getsize(os.path.join(r, n))
