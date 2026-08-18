@@ -218,7 +218,25 @@ class StackDesignVector:
 
     # Payload stage nose
     f_nose: float = 3.6                # nose fineness on the payload stage
-    nose_shape: str = "tangent_ogive"
+    nose_shape: str = "tangent_ogive"  # "tangent_ogive" | "cone" | "spline"
+
+    # Splined outer mould line. Same one-scalar family as `config.DesignVector`: 0.0 is the
+    # ogive-equivalent spline (wave-drag shape ratio exactly 1.0), 1.0 is the slender-body
+    # drag optimum. One scalar is enough because the optimal normalised profile is
+    # fineness-invariant; see `oml_spline` and `sizing/wavedrag`.
+    nose_blend: float = 0.0
+    n_ctrl_oml: int = 9
+
+    # The interstage flare. "cone" is the straight truncated cone the notebook has always
+    # built; "spline" replaces it with a revolved splined contour between the two stage radii.
+    #
+    # This is the one place where IV-1 differs from SV-1 in KIND rather than degree: the flare
+    # is EXPANDING aft (stage 2 is narrower than the booster), so its contribution to the
+    # stack area distribution is a positive dS/dx well behind the nose. Wave drag is driven by
+    # S''(x) over the WHOLE body, so a shoulder there costs real drag, and smoothing it is
+    # worth more than smoothing an equivalent feature on the nose.
+    interstage_shape: str = "cone"     # "cone" | "spline"
+    interstage_blend: float = 0.0
 
     # Interstage, jettisoned with stage 1
     L_interstage: float = 0.28         # m
@@ -264,6 +282,39 @@ class StackDesignVector:
     def m_propellant_total(self) -> float:
         return sum(s.m_propellant for s in self.stages)
 
+    @property
+    def nose_control(self) -> tuple[float, ...] | None:
+        """Spline control values of the payload-stage nose. SINGLE SOURCE OF TRUTH.
+
+        Mirrors `config.DesignVector.nose_control`, deliberately by calling the same two
+        functions rather than by copying the blend arithmetic, so the two vehicles cannot end
+        up with different definitions of the same shape family.
+        """
+        if self.nose_shape != "spline":
+            return None
+        from .oml_spline import ogive_control_values
+        from .sizing.wavedrag import optimal_control_values
+
+        k = self.L_nose / (0.5 * self.payload_stage.D)
+        base = ogive_control_values(k, self.n_ctrl_oml)
+        best = optimal_control_values(self.n_ctrl_oml)
+        b = float(self.nose_blend)
+        return tuple((1.0 - b) * lo + b * hi for lo, hi in zip(base, best))
+
+    @property
+    def interstage_control(self) -> tuple[float, ...] | None:
+        """Spline control values of the interstage flare, or None for the straight cone.
+
+        Expressed on the EXPANSION fraction: 0 at the stage-2 radius, 1 at the booster radius.
+        `interstage_blend = 0` reproduces the straight cone exactly, which is the degeneracy
+        anchor against every previously banked IV-1 measurement.
+        """
+        if self.interstage_shape != "spline":
+            return None
+        from .oml_spline import boattail_control_values
+
+        return boattail_control_values(float(self.interstage_blend), self.n_ctrl_oml)
+
     def stage_at(self, index: int) -> StageSpec:
         for s in self.stages:
             if s.index == index:
@@ -273,6 +324,10 @@ class StackDesignVector:
     def bounds(self) -> dict[str, tuple[float, float]]:
         """SPEC_IV1.md section 4. Keys are dotted paths the sizer knows how to set."""
         return {
+            # Shape blends: pure interpolation between two shapes each known to be valid, so
+            # these bounds are the definition of the family rather than a judgement call.
+            "nose_blend": (0.0, 1.0),
+            "interstage_blend": (0.0, 1.0),
             "stages.0.D": (0.28, 0.42),
             "stages.1.D": (0.20, 0.36),
             "stages.0.L": (1.2, 2.8),
@@ -352,6 +407,9 @@ class StackDesignVector:
             "acs": asdict(self.acs),
             "f_nose": self.f_nose,
             "nose_shape": self.nose_shape,
+            "nose_blend": self.nose_blend,
+            "interstage_shape": self.interstage_shape,
+            "interstage_blend": self.interstage_blend,
             "L_interstage": self.L_interstage,
             "t_interstage": self.t_interstage,
             "L_seeker": self.L_seeker,

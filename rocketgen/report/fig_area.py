@@ -25,15 +25,49 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..config import DesignVector
-from .figstyle import ACCENT, BAD, COOL, GREY, INK, STYLE, measurements, out_path, point_ntop
+from .figstyle import (
+    ACCENT,
+    BAD,
+    COOL,
+    GREY,
+    INK,
+    STYLE,
+    measurements,
+    out_path,
+    point_ntop,
+    source_label,
+)
+
+
+def _spline_radius(length: float, radius: float, control, r0_over_r: float, s: float) -> float:
+    """Radius of a splined run at fraction `s` of its length, m.
+
+    The control points sit at the GREVILLE abscissae of the clamped knot vector, so the axial
+    coordinate satisfies `x(u) = length * u` exactly. The curve parameter is therefore the
+    length fraction, and no inverse solve is needed. `oml_spline.station_fractions` is where
+    that choice is made; see `docs/NTOP_NOTES.md` section 25.
+    """
+    from ..oml_spline import SplineProfile
+
+    p = SplineProfile(length=length, radius=radius, control=tuple(control),
+                      r0_over_r=r0_over_r)
+    return p.point_at(min(max(s, 0.0), 1.0))[1]
 
 
 def oml_radius(dv: DesignVector, x: float) -> float:
-    """Outer-mould-line radius at station x from the nose tip, m."""
+    """Outer-mould-line radius at station x from the nose tip, m.
+
+    Handles both shape families. A splined run is evaluated as the SAME B-spline that nTop
+    revolves, read from `DesignVector.nose_control` and `DesignVector.boattail_control`, so
+    this closed form and the measured solid describe one body rather than two.
+    """
     R = 0.5 * dv.D
     if x <= 0.0:
         return 0.0
     if x < dv.L_nose:
+        nose_control = getattr(dv, "nose_control", None)
+        if nose_control is not None:
+            return _spline_radius(dv.L_nose, R, nose_control, 0.0, x / dv.L_nose)
         rho = (R * R + dv.L_nose ** 2) / (2.0 * R)
         return max(math.sqrt(max(rho * rho - (dv.L_nose - x) ** 2, 0.0)) - (rho - R), 0.0)
     x_boat = dv.L_nose + dv.L_body_cyl
@@ -41,6 +75,13 @@ def oml_radius(dv: DesignVector, x: float) -> float:
         return R
     if x <= dv.L_total:
         r_base = 0.5 * dv.d_base
+        boattail_control = getattr(dv, "boattail_control", None)
+        if boattail_control is not None:
+            # The boattail run is expressed on the CONTRACTION. `rocket_notebook` places its
+            # control points at `R + (r_base - R) * c_i`, so in SplineProfile terms the run
+            # END radius is r_base and it STARTS at R, i.e. r0_over_r = R / r_base > 1.
+            return _spline_radius(dv.L_boattail, r_base, boattail_control, R / r_base,
+                                  (x - x_boat) / dv.L_boattail)
         return R + (r_base - R) * (x - x_boat) / dv.L_boattail
     return 0.0
 
@@ -141,7 +182,7 @@ def make_figure(path: str | None = None) -> str:
         fig.text(
             0.012, 0.982,
             "S(x) from the nTop notebook against the closed-form outer mould line plus plate "
-            "fins.\nSource: runs/SV-1/converged/measurements.json.",
+            "fins.\nSource: %s." % source_label("converged/measurements.json"),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
         fig.subplots_adjust(left=0.085, right=0.985, top=0.875, bottom=0.095, hspace=0.30)
@@ -152,4 +193,12 @@ def make_figure(path: str | None = None) -> str:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    from .figstyle import select_study
+
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                     help="which study to draw; spline reads runs/SV-1_spline")
+    select_study(_ap.parse_args().oml)
     print(make_figure())

@@ -1,0 +1,30 @@
+parameter,value,unit,description
+D,0.35,m,body diameter
+L_total,3.6,m,overall length
+f_nose,3.4,-,"nose fineness, nose length / diameter"
+L_nose,1.19,m,nose length (derived)
+fineness,10.2857,-,"body fineness, length / diameter (derived)"
+S_ref,0.0962113,m^2,aerodynamic reference area (derived)
+nose_shape,spline,-,nose profile family
+t_wall,0.003,m,airframe wall thickness
+L_boattail,0.2,m,boattail length
+d_base,0.3,m,base diameter
+n_fin,4,-,"fin count, cruciform"
+b_fin,0.23,m,fin exposed semi-span
+c_r_fin,0.34,m,fin root chord
+c_t_fin,0.153,m,fin tip chord (derived)
+taper_fin,0.45,-,fin taper ratio
+sweep_fin,45,deg,fin leading-edge sweep
+t_fin,0.012,m,fin maximum thickness
+x_fin_le,3.18,m,fin root leading-edge station (derived)
+S_fin_exposed,0.056695,m^2,exposed area of one fin panel (derived)
+m_p_boost,130,kg,boost propellant
+m_p_sustain,172,kg,sustain propellant
+m_p_terminal,40,kg,terminal-boost propellant
+F_boost,45000,N,boost thrust
+F_terminal,8000,N,terminal-boost thrust
+p_c,7e+06,Pa,chamber pressure
+eps_nozzle,8,-,nozzle area ratio
+L_seeker,0.3,m,seeker bay length
+L_guidance,0.25,m,guidance bay length
+L_warhead,0.55,m,warhead bay length

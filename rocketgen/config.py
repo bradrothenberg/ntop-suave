@@ -69,6 +69,31 @@ class DesignVector:
     L_boattail: float = 0.20         # aft boattail length, m
     d_base: float = 0.30             # base (nozzle exit plane) diameter, m
 
+    # --- splined outer mould line ---
+    #
+    # `nose_shape = "spline"` swaps the one-parameter tangent-ogive family for a clamped cubic
+    # B-spline. `nose_blend` then selects a shape along a ONE-DIMENSIONAL family:
+    #
+    #     0.0  the ogive-equivalent spline, which reproduces the tangent ogive to 1e-6 of R
+    #          and gives a wave-drag shape ratio of exactly 1.0
+    #     1.0  the spline that minimises slender-body wave drag at this control-point count
+    #
+    # One scalar suffices because the drag-optimal NORMALISED profile is fineness-invariant
+    # (measured to 6.2e-9), so the shape sub-problem separates from sizing. Six free control
+    # values would otherwise enter the design vector and the DOE for no extra reach.
+    #
+    # The trade this scalar buys, measured at f_nose 3.4: nose wave drag 1.000 -> 0.875, nose
+    # enclosed volume -6.35 percent, nose wetted area -2.7 percent. Less drag, less room for
+    # the seeker, and a centre of pressure that moves aft.
+    nose_blend: float = 0.0
+    n_ctrl_oml: int = 9              # spline control points; see oml_spline.SOURCES
+
+    # Boattail: `boattail_shape = "spline"` replaces the straight cone with a splined
+    # contraction. `boattail_blend` runs 0.0 (straight cone, exactly the old geometry) to 1.0
+    # (maximum curvature allowed by the control polygon).
+    boattail_shape: str = "cone"     # "cone" | "spline"
+    boattail_blend: float = 0.0
+
     # --- fins: cruciform, 4 panels ---
     n_fin: int = 4
     b_fin: float = 0.18              # exposed semi-span per panel, m
@@ -128,6 +153,12 @@ class DesignVector:
             # that the case penalty eats the benefit.
             "m_p_terminal": (0.0, 60.0),
             "F_terminal": (2.0e3, 15.0e3),
+            # Shape blends. Both are pure interpolation parameters between two shapes that
+            # are each known to be valid, so the bounds are the definition of the family and
+            # not a judgement call. Outside [0, 1] the spline extrapolates and stops being
+            # monotone, which `oml_spline.SplineProfile.is_monotone` would catch.
+            "nose_blend": (0.0, 1.0),
+            "boattail_blend": (0.0, 1.0),
         }
 
     # --- derived geometry, single source of truth ---
@@ -136,6 +167,47 @@ class DesignVector:
     def L_nose(self) -> float:
         """Nose length, m."""
         return self.f_nose * self.D
+
+    @property
+    def is_splined(self) -> bool:
+        """True when the outer mould line uses the spline family anywhere."""
+        return self.nose_shape == "spline" or self.boattail_shape == "spline"
+
+    @property
+    def nose_control(self) -> tuple[float, ...] | None:
+        """Spline control values of the nose, or None when the nose is not splined.
+
+        SINGLE SOURCE OF TRUTH. The nTop notebook, the mass build-up, the aero build-up and
+        the wave-drag model all read the shape from here, so they cannot drift apart.
+
+        The blend is linear in the control values, and the radius is linear in the control
+        values, so the blend is linear in the profile too. That keeps every blend a valid
+        monotone nose (verified across the range) rather than only the two endpoints.
+        """
+        if self.nose_shape != "spline":
+            return None
+        from .oml_spline import ogive_control_values
+        from .sizing.wavedrag import optimal_control_values
+
+        k = self.L_nose / (0.5 * self.D)
+        base = ogive_control_values(k, self.n_ctrl_oml)
+        best = optimal_control_values(self.n_ctrl_oml)
+        b = float(self.nose_blend)
+        return tuple((1.0 - b) * lo + b * hi for lo, hi in zip(base, best))
+
+    @property
+    def boattail_control(self) -> tuple[float, ...] | None:
+        """Spline control values of the boattail, or None when it is a straight cone.
+
+        The run goes from the body radius down to the base radius, so the control values are
+        expressed on the CONTRACTION: 0 at the start of the run, 1 at the base. `blend = 0`
+        reproduces the straight cone exactly.
+        """
+        if self.boattail_shape != "spline":
+            return None
+        from .oml_spline import boattail_control_values
+
+        return boattail_control_values(float(self.boattail_blend), self.n_ctrl_oml)
 
     @property
     def S_ref(self) -> float:

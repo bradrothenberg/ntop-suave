@@ -1,0 +1,229 @@
+{
+  "measurements": {
+    "volume_total": 0.28792305483824526,
+    "volume_structure": 0.013783255651291225,
+    "volume_cavity": 0.27688159889823305,
+    "volume_grain": null,
+    "area_wetted_body": 3.5031909744818632,
+    "area_wetted_fins": 0.5055783842345206,
+    "area_base": 0.07068583470577035,
+    "mass_structure": 38.730948380128275,
+    "cg_structure": [
+      2.2532597550385645,
+      9.694039878280873e-06,
+      -0.00034286448093977825
+    ],
+    "inertia_structure": [
+      42.69664682427385,
+      42.695340195460126,
+      1.430458284566938
+    ],
+    "area_distribution": [
+      [
+        0.1125,
+        0.00411636232456658
+      ],
+      [
+        0.3375,
+        0.022694407787639648
+      ],
+      [
+        0.5625,
+        0.046704081003554165
+      ],
+      [
+        0.7875,
+        0.07039939356036484
+      ],
+      [
+        1.0125,
+        0.08909261820372194
+      ],
+      [
+        1.2375,
+        0.09622414701152593
+      ],
+      [
+        1.4625000000000001,
+        0.09622414701152593
+      ],
+      [
+        1.6875,
+        0.09622414701152593
+      ],
+      [
+        1.9125,
+        0.09622414701152593
+      ],
+      [
+        2.1375,
+        0.09622414701152593
+      ],
+      [
+        2.3625000000000003,
+        0.09622414701152593
+      ],
+      [
+        2.5875,
+        0.09622414701152593
+      ],
+      [
+        2.8125,
+        0.09622414701152593
+      ],
+      [
+        3.0375,
+        0.09622414701152593
+      ],
+      [
+        3.2625,
+        0.10018589091487229
+      ],
+      [
+        3.4875000000000003,
+        0.09603526222053915
+      ]
+    ],
+    "stl_path": "runs/SV-1_spline/converged/geom/sv1.stl",
+    "step_path": "runs/SV-1_spline/converged/geom/sv1.step",
+    "implicit_path": "runs/SV-1_spline/converged/geom/sv1.implicit",
+    "ntop_path": "runs/_ntop_cache/sv1_9c83c9f9a4981c37.ntop",
+    "wall_time_s": 133.0990888000233,
+    "ntopcl_returncode": 0,
+    "warnings": []
+  },
+  "raw": {
+    "Measurements JSON": {
+      "area_base": 0.07068583470577035,
+      "area_section_00": 0.00411636232456658,
+      "area_section_01": 0.022694407787639648,
+      "area_section_02": 0.046704081003554165,
+      "area_section_03": 0.07039939356036484,
+      "area_section_04": 0.08909261820372194,
+      "area_section_05": 0.09622414701152593,
+      "area_section_06": 0.09622414701152593,
+      "area_section_07": 0.09622414701152593,
+      "area_section_08": 0.09622414701152593,
+      "area_section_09": 0.09622414701152593,
+      "area_section_10": 0.09622414701152593,
+      "area_section_11": 0.09622414701152593,
+      "area_section_12": 0.09622414701152593,
+      "area_section_13": 0.09622414701152593,
+      "area_section_14": 0.10018589091487229,
+      "area_section_15": 0.09603526222053915,
+      "area_wetted_body": 3.5031909744818632,
+      "area_wetted_fins": 0.5055783842345206,
+      "cg_structure_x": 2.2532597550385645,
+      "cg_structure_y": 9.694039878280873e-06,
+      "cg_structure_z": -0.00034286448093977825,
+      "inertia_structure_1": 42.69664682427385,
+      "inertia_structure_2": 42.695340195460126,
+      "inertia_structure_3": 1.430458284566938,
+      "mass_structure": 38.730948380128275,
+      "station_00": 0.1125,
+      "station_01": 0.3375,
+      "station_02": 0.5625,
+      "station_03": 0.7875,
+      "station_04": 1.0125,
+      "station_05": 1.2375,
+      "station_06": 1.4625000000000001,
+      "station_07": 1.6875,
+      "station_08": 1.9125,
+      "station_09": 2.1375,
+      "station_10": 2.3625000000000003,
+      "station_11": 2.5875,
+      "station_12": 2.8125,
+      "station_13": 3.0375,
+      "station_14": 3.2625,
+      "station_15": 3.4875000000000003,
+      "volume_cavity": 0.27688159889823305,
+      "volume_structure": 0.013783255651291225,
+      "volume_total": 0.28792305483824526
+    },
+    "area_base": 0.07068583470577035,
+    "area_section_00": 0.00411636232456658,
+    "area_section_01": 0.022694407787639648,
+    "area_section_02": 0.046704081003554165,
+    "area_section_03": 0.07039939356036484,
+    "area_section_04": 0.08909261820372194,
+    "area_section_05": 0.09622414701152593,
+    "area_section_06": 0.09622414701152593,
+    "area_section_07": 0.09622414701152593,
+    "area_section_08": 0.09622414701152593,
+    "area_section_09": 0.09622414701152593,
+    "area_section_10": 0.09622414701152593,
+    "area_section_11": 0.09622414701152593,
+    "area_section_12": 0.09622414701152593,
+    "area_section_13": 0.09622414701152593,
+    "area_section_14": 0.10018589091487229,
+    "area_section_15": 0.09603526222053915,
+    "area_wetted_body": 3.5031909744818632,
+    "area_wetted_fins": 0.5055783842345206,
+    "cg_structure_x": 2.2532597550385645,
+    "cg_structure_y": 9.694039878280873e-06,
+    "cg_structure_z": -0.00034286448093977825,
+    "inertia_structure_1": 42.69664682427385,
+    "inertia_structure_2": 42.695340195460126,
+    "inertia_structure_3": 1.430458284566938,
+    "mass_structure": 38.730948380128275,
+    "station_00": 0.1125,
+    "station_01": 0.3375,
+    "station_02": 0.5625,
+    "station_03": 0.7875,
+    "station_04": 1.0125,
+    "station_05": 1.2375,
+    "station_06": 1.4625000000000001,
+    "station_07": 1.6875,
+    "station_08": 1.9125,
+    "station_09": 2.1375,
+    "station_10": 2.3625000000000003,
+    "station_11": 2.5875,
+    "station_12": 2.8125,
+    "station_13": 3.0375,
+    "station_14": 3.2625,
+    "station_15": 3.4875000000000003,
+    "volume_cavity": 0.27688159889823305,
+    "volume_structure": 0.013783255651291225,
+    "volume_total": 0.28792305483824526
+  },
+  "unmapped": [
+    "area_section_00",
+    "area_section_01",
+    "area_section_02",
+    "area_section_03",
+    "area_section_04",
+    "area_section_05",
+    "area_section_06",
+    "area_section_07",
+    "area_section_08",
+    "area_section_09",
+    "area_section_10",
+    "area_section_11",
+    "area_section_12",
+    "area_section_13",
+    "area_section_14",
+    "area_section_15",
+    "cg_structure_x",
+    "cg_structure_y",
+    "cg_structure_z",
+    "inertia_structure_1",
+    "inertia_structure_2",
+    "inertia_structure_3",
+    "station_00",
+    "station_01",
+    "station_02",
+    "station_03",
+    "station_04",
+    "station_05",
+    "station_06",
+    "station_07",
+    "station_08",
+    "station_09",
+    "station_10",
+    "station_11",
+    "station_12",
+    "station_13",
+    "station_14",
+    "station_15"
+  ]
+}

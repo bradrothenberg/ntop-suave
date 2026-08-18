@@ -544,6 +544,16 @@ def size(
         ("f_nose", 0.4, 0.05),
         ("x_fin_te_gap", 0.03, 0.01),
     ]
+    # Shape blends are searched only when the outer mould line is actually splined. They go
+    # LAST because they are the weakest lever on launch mass: the blend trades a few percent of
+    # CD0 against a few percent of forebody volume, where the propellant and fin variables move
+    # tens of kilograms. Putting them earlier would spend the evaluation budget on the smallest
+    # effect first.
+    if getattr(dv0, "nose_shape", None) == "spline":
+        schedule.append(("nose_blend", 0.35, 0.05))
+    if getattr(dv0, "boattail_shape", None) == "spline":
+        schedule.append(("boattail_blend", 0.35, 0.05))
+
     bounds = dv0.bounds()
     bounds.setdefault("x_fin_te_gap", (0.02, 0.30))
 

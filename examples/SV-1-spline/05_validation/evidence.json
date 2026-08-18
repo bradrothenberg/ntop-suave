@@ -1,0 +1,1030 @@
+{
+  "oml_family": "spline",
+  "case_dir": "SV-1_spline",
+  "integrator": {
+    "vacuum_range_rel": 1.9539925233402755e-14,
+    "vacuum_apogee_rel": 2.1094237467877974e-15,
+    "rk4_dt": [
+      0.8,
+      0.4,
+      0.2,
+      0.1
+    ],
+    "rk4_order_ratios": [
+      15.934622935350635,
+      16.01120322652924,
+      15.762361251261352
+    ],
+    "tsiolkovsky_rel": 1.7486012637846216e-13,
+    "terminal_velocity_rel": 8.704182929974991e-10,
+    "energy_drift_rel": 6.45274825548937e-15
+  },
+  "aero": {
+    "n_shots_table": 23,
+    "n_shots_cd0": 17,
+    "n_shots_cna_xcp": 13,
+    "cd0_mean_bias": -0.1455547206240058,
+    "cd0_worst_shot": 0.22931015321960235,
+    "cna_mean_bias": -0.10692505689300676,
+    "cna_worst_shot": 0.28963501764053423,
+    "xcp_mean_bias": 0.020221503471974524,
+    "xcp_worst_shot": 0.11442477807433815,
+    "cd0_worst_band": 0.1932233158726928,
+    "cna_worst_band": 0.19837770555748024,
+    "xcp_worst_band": 0.042032980331625724,
+    "tolerances": {
+      "cd0_band": 0.22,
+      "cd0_shot": 0.25,
+      "cna_band": 0.22,
+      "cna_shot": 0.3,
+      "xcp_band": 0.06,
+      "xcp_shot": 0.15
+    },
+    "bands": [
+      {
+        "lo": 1.4,
+        "hi": 2.0,
+        "n_all": 3,
+        "n_good": 3,
+        "cd0_err": -0.17937230861444475,
+        "cna_err": -0.10440293910364395,
+        "xcp_err": 0.042032980331625724
+      },
+      {
+        "lo": 2.0,
+        "hi": 2.6,
+        "n_all": 3,
+        "n_good": 1,
+        "cd0_err": -0.1932233158726928,
+        "cna_err": -0.08679587647966647,
+        "xcp_err": 0.03070564549392052
+      },
+      {
+        "lo": 2.6,
+        "hi": 3.2,
+        "n_all": 4,
+        "n_good": 3,
+        "cd0_err": -0.1717799663318471,
+        "cna_err": -0.010938473938689963,
+        "xcp_err": 0.0016441783674410182
+      },
+      {
+        "lo": 3.2,
+        "hi": 4.0,
+        "n_all": 5,
+        "n_good": 4,
+        "cd0_err": -0.11698054639037969,
+        "cna_err": -0.16728295364114298,
+        "xcp_err": 0.01946160473902836
+      },
+      {
+        "lo": 4.0,
+        "hi": 4.6,
+        "n_all": 2,
+        "n_good": 2,
+        "cd0_err": -0.06140677989940391,
+        "cna_err": -0.19837770555748024,
+        "xcp_err": 0.0077054270707452854
+      }
+    ],
+    "cd0_calibration": 1.171
+  },
+  "ntop": {
+    "rows": [
+      {
+        "quantity": "volume_total",
+        "ntop": 0.28792305483824526,
+        "closed_form": 0.2879366796971869,
+        "rel_err": -4.7318941636564915e-05
+      },
+      {
+        "quantity": "area_wetted_body",
+        "ntop": 3.5031909744818632,
+        "closed_form": 3.5026329092226027,
+        "rel_err": 0.0001593273613660351
+      },
+      {
+        "quantity": "area_wetted_fins",
+        "ntop": 0.5055783842345206,
+        "closed_form": 0.4535600000000001,
+        "rel_err": 0.1146890912658094
+      },
+      {
+        "quantity": "area_base",
+        "ntop": 0.07068583470577035,
+        "closed_form": 0.07068583470577035,
+        "rel_err": 0.0
+      }
+    ],
+    "volume_structure": 0.013783255651291225,
+    "volume_cavity": 0.27688159889823305,
+    "mass_structure": 38.730948380128275,
+    "billet_mass": 809.0637840954691,
+    "airframe_density": 2810.0,
+    "cg_structure": [
+      2.2532597550385645,
+      9.694039878280873e-06,
+      -0.00034286448093977825
+    ],
+    "inertia_structure": [
+      42.69664682427385,
+      42.695340195460126,
+      1.430458284566938
+    ],
+    "wall_time_s": 133.0990888000233,
+    "fin_area_note": "The closed form counts two sides of each exposed panel only. The nTop plate has edges as well, so a positive error is expected."
+  },
+  "dive": {
+    "sweep": [
+      {
+        "gamma_deg": -25.0,
+        "impact_mach": 0.6740678043621149,
+        "range_km": 250.29096695254037,
+        "q_max_kPa": 150.49097422221823,
+        "burnout_kg": 200.5663685715305,
+        "converged": true
+      },
+      {
+        "gamma_deg": -35.0,
+        "impact_mach": 0.8021381158282184,
+        "range_km": 241.98269765329053,
+        "q_max_kPa": 150.49097422221823,
+        "burnout_kg": 200.5663685715305,
+        "converged": true
+      },
+      {
+        "gamma_deg": -50.0,
+        "impact_mach": 0.9051941977041653,
+        "range_km": 235.3740065055311,
+        "q_max_kPa": 150.49097422221823,
+        "burnout_kg": 200.5663685715305,
+        "converged": true
+      },
+      {
+        "gamma_deg": -70.0,
+        "impact_mach": 0.9610412591048247,
+        "range_km": 230.37608958441493,
+        "q_max_kPa": 150.49097422221823,
+        "burnout_kg": 200.5663685715305,
+        "converged": true
+      },
+      {
+        "gamma_deg": -89.0,
+        "impact_mach": 0.9738891326979924,
+        "range_km": 227.0619626006657,
+        "q_max_kPa": 150.49097422221823,
+        "burnout_kg": 200.5663685715305,
+        "converged": true
+      }
+    ],
+    "burnout_kg": 200.5663685715305,
+    "self_consistent": {
+      "v_terminal": 318.2031102127266,
+      "mach": 0.9350829549784602,
+      "CD": 0.32963846504300265
+    },
+    "fixed_cd": [
+      {
+        "CD": 0.338,
+        "v_terminal": 314.2425654825231,
+        "mach": 0.9234443576461865
+      },
+      {
+        "CD": 0.45,
+        "v_terminal": 272.34355675152005,
+        "mach": 0.8003184432933617
+      },
+      {
+        "CD": 0.6,
+        "v_terminal": 235.85643870382532,
+        "mach": 0.6930961030092668
+      }
+    ],
+    "cd_needed_for_mach_1p50": 0.1281019221351019,
+    "v_required_for_mach_1p50": 510.44098577337957,
+    "q_at_mach_1p50_sea_level": 159586.87499999997,
+    "q_at_90kPa_mach": 1.126455211235932,
+    "sea_level_density": 1.2250000002007604,
+    "sea_level_sound_speed": 340.29399051558636,
+    "S_ref": 0.0962112750161874
+  },
+  "terminal_sweep": {
+    "rows": [
+      {
+        "m_p_terminal": 0.0,
+        "m_p_sustain": 212.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 241.98269765329053,
+        "mach_terminal": 0.8021381158282184,
+        "q_max_kPa": 150.49097422221823,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach",
+          "R10 static margin"
+        ]
+      },
+      {
+        "m_p_terminal": 10.0,
+        "m_p_sustain": 202.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 221.4205457911102,
+        "mach_terminal": 1.162434112440538,
+        "q_max_kPa": 150.49097422221823,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach",
+          "R10 static margin"
+        ]
+      },
+      {
+        "m_p_terminal": 20.0,
+        "m_p_sustain": 192.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 213.01593878111765,
+        "mach_terminal": 1.3586469786190611,
+        "q_max_kPa": 150.49097422221823,
+        "feasible": false,
+        "violations": [
+          "R6 terminal Mach",
+          "R10 static margin"
+        ]
+      },
+      {
+        "m_p_terminal": 30.0,
+        "m_p_sustain": 182.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 204.46552894253935,
+        "mach_terminal": 1.5245926460265007,
+        "q_max_kPa": 164.86265653018512,
+        "feasible": false,
+        "violations": [
+          "R10 static margin"
+        ]
+      },
+      {
+        "m_p_terminal": 40.0,
+        "m_p_sustain": 172.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 196.03695233388765,
+        "mach_terminal": 1.6838024154580853,
+        "q_max_kPa": 201.0929794588393,
+        "feasible": false,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ]
+      },
+      {
+        "m_p_terminal": 50.0,
+        "m_p_sustain": 162.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 187.57592282064027,
+        "mach_terminal": 1.83915923501893,
+        "q_max_kPa": 239.91274337946754,
+        "feasible": false,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ]
+      },
+      {
+        "m_p_terminal": 60.0,
+        "m_p_sustain": 152.0,
+        "m0_kg": 542.5663685715305,
+        "range_km": 179.06644355099004,
+        "mach_terminal": 2.0486037287788097,
+        "q_max_kPa": 297.66691751747555,
+        "feasible": false,
+        "violations": [
+          "R3 range",
+          "R10 static margin",
+          "q_max"
+        ]
+      }
+    ],
+    "range_slope_km_per_kg": -0.9764892667681118,
+    "propellant_pool_kg": 212.0
+  },
+  "motor": {
+    "cruise_drag_N": 1634.5425721675706,
+    "operating_point": {
+      "boost": {
+        "propellant_mass": 130.0,
+        "p_c": 7000000.0,
+        "p_e": 118082.66996806514,
+        "throat_area": 0.004024186823931038,
+        "throat_diameter": 0.07158040094628694,
+        "exit_area": 0.0321934945914483,
+        "exit_diameter": 0.20245994763668582,
+        "burning_area": 0.9647501708686606,
+        "Kn": 239.7379180140155,
+        "burn_rate": 0.010060779316601196,
+        "mdot": 17.4710494165732,
+        "burn_time": 7.440881019813314,
+        "thrust_vacuum": 48262.005839478494,
+        "thrust_sea_level": 44999.99999999999,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      },
+      "sustain": {
+        "propellant_mass": 172.0,
+        "p_c": 766950.1239223736,
+        "p_e": 12937.645480727473,
+        "throat_area": 0.0014105390158455295,
+        "throat_diameter": 0.04237869812023898,
+        "exit_area": 0.011284312126764236,
+        "exit_diameter": 0.1198650592747143,
+        "burning_area": 0.08972702777917808,
+        "Kn": 63.611872320591125,
+        "burn_rate": 0.004154313391949546,
+        "mdot": 0.6709575476211632,
+        "burn_time": 256.35004868760313,
+        "thrust_vacuum": 1853.452320420839,
+        "thrust_sea_level": 710.0693941764528,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      },
+      "terminal": {
+        "propellant_mass": 40.0,
+        "p_c": 5903606.994852632,
+        "p_e": 99587.6680563349,
+        "throat_area": 0.0008598497064005495,
+        "throat_diameter": 0.033087681223048844,
+        "exit_area": 0.006878797651204396,
+        "exit_diameter": 0.09358609506622655,
+        "burning_area": 0.18611051714426372,
+        "Kn": 216.4454040734028,
+        "burn_rate": 0.009398085295652362,
+        "mdot": 3.148348526171571,
+        "burn_time": 12.705073681483565,
+        "thrust_vacuum": 8696.994172008286,
+        "thrust_sea_level": 8000.000000000001,
+        "C_F_vacuum": 1.7132833450430267,
+        "isp_vacuum": 281.6862837023816
+      }
+    },
+    "throat_transitions": [
+      {
+        "from": "boost",
+        "to": "sustain",
+        "area_from": 0.004024186823931038,
+        "area_to": 0.0014105390158455295,
+        "direction": "decrease",
+        "credible": false,
+        "mechanism": "no insert mechanism shrinks a throat; needs a separate smaller sustainer nozzle or a jettisoned tandem booster"
+      },
+      {
+        "from": "sustain",
+        "to": "terminal",
+        "area_from": 0.0014105390158455295,
+        "area_to": 0.0014105390158455295,
+        "direction": "unchanged",
+        "credible": true,
+        "mechanism": "no change needed"
+      }
+    ],
+    "separation_check": {
+      "boost": {
+        "p_e": 118082.66996806514,
+        "p_a_separation": 295206.6749201628,
+        "separation_altitude": 0.0
+      },
+      "sustain": {
+        "p_e": 12937.645480727473,
+        "p_a_separation": 32344.113701818682,
+        "separation_altitude": 8668.719692716873
+      },
+      "terminal": {
+        "p_e": 99587.6680563349,
+        "p_a_separation": 248969.17014083723,
+        "separation_altitude": 0.0
+      }
+    },
+    "inert": {
+      "case": 5.596642740313285,
+      "nozzle": 3.174923030292155,
+      "insulation": 10.509948767848305,
+      "igniter": 1.71,
+      "total_physics": 20.991514538453746,
+      "case_thickness": 0.0012039999999999998,
+      "case_length": 2.602987840108585,
+      "correlation_min": 33.82417582417581,
+      "correlation_max": 85.49999999999999,
+      "mass_fraction_physics": 0.9421707844461746,
+      "recommended": 33.82417582417581
+    },
+    "grain": {
+      "length_total": 2.502987840108585,
+      "L_over_D": 7.405289467776879,
+      "bay_length_available": 2.3,
+      "volumetric_loading": 0.9206668012616815,
+      "feasible": false,
+      "warnings": [
+        "grain length 2.503 m exceeds the available motor bay 2.300 m by 0.203 m"
+      ]
+    },
+    "propellant_mass": 342.0,
+    "warnings": [
+      "sustain nozzle: exit pressure 12.9 kPa; the Summerfield criterion predicts flow separation below 8669 m altitude. Reported only, the thrust model does not change.",
+      "sustain chamber pressure 0.767 MPa is below 1 MPa; composite propellant combustion is normally unreliable there.",
+      "throat area decreases from boost (4024 mm^2) to sustain (1411 mm^2): no insert mechanism shrinks a throat; needs a separate smaller sustainer nozzle or a jettisoned tandem booster"
+    ]
+  },
+  "wavedrag": {
+    "sears_haack": {
+      "series": 0.9689896690194093,
+      "closed_form": 0.9689461462593694,
+      "rel_err": 4.49176254098127e-05,
+      "L": 3.0,
+      "R": 0.5,
+      "n_stations": 4001,
+      "refinement": [
+        {
+          "n_stations": 501,
+          "rel_err": 0.017171353946520584
+        },
+        {
+          "n_stations": 1001,
+          "rel_err": 0.0025953924312793752
+        },
+        {
+          "n_stations": 2001,
+          "rel_err": 0.00020050334213839172
+        },
+        {
+          "n_stations": 4001,
+          "rel_err": 4.49176254098127e-05
+        },
+        {
+          "n_stations": 8001,
+          "rel_err": 1.652818949948731e-05
+        }
+      ]
+    },
+    "von_karman": {
+      "series": 0.002672569460540227,
+      "closed_form": 0.002672535417116317,
+      "rel_err": 1.2738249862698225e-05,
+      "cd_on_base": 0.027778131618051743,
+      "cd_on_base_closed": 0.027777777777777776,
+      "cd_rel_err": 1.2738249862698225e-05,
+      "L": 2.1,
+      "R": 0.175
+    },
+    "von_karman_shape_factor": {
+      "measured": 1.273325956352648,
+      "closed_form": 1.2732395447351628,
+      "rel_err": 6.786752566911858e-05
+    },
+    "glauert_direct": [
+      {
+        "n": 250,
+        "rel_err": 0.04841354419883348
+      },
+      {
+        "n": 500,
+        "rel_err": 0.02674723197698936
+      },
+      {
+        "n": 1000,
+        "rel_err": 0.01464168571612845
+      }
+    ],
+    "optimality": [
+      {
+        "modes": "[0.4, 0.02]",
+        "drag": 0.1262920246743097,
+        "raises": true
+      },
+      {
+        "modes": "[0.4, 0.0, 0.02]",
+        "drag": 0.1266061839396687,
+        "raises": true
+      },
+      {
+        "modes": "[0.4, -0.05]",
+        "drag": 0.12959069696057898,
+        "raises": true
+      },
+      {
+        "modes": "[0.4, 0.01, 0.01, 0.01]",
+        "drag": 0.12637056449064946,
+        "raises": true
+      }
+    ],
+    "n_ctrl": 9,
+    "shape_factor_ogive": 1.4902761754790257,
+    "shape_factor_optimal_spline": 1.3033043564177322,
+    "shape_factor_bound": 1.273325956352648,
+    "ogive_penalty_over_bound": 1.170380740331263,
+    "spline_over_bound": 1.0235433825215934,
+    "gap_recovered_fraction": 0.861818991537311,
+    "ogive_penalty_by_fineness": [
+      {
+        "f_nose": 2.0,
+        "sf_over_bound": 1.176097560713005
+      },
+      {
+        "f_nose": 3.0,
+        "sf_over_bound": 1.1703782158155493
+      },
+      {
+        "f_nose": 4.0,
+        "sf_over_bound": 1.1686295165776195
+      },
+      {
+        "f_nose": 5.0,
+        "sf_over_bound": 1.1678639380571878
+      }
+    ],
+    "optimal_is_monotone": true,
+    "optimal_max_slope": 0.43009007217205647
+  },
+  "shape_trade": {
+    "applicable": true,
+    "k_L_over_R": 6.8,
+    "converged_nose_blend": 0.7,
+    "converged_boattail_blend": 0.35,
+    "rows": [
+      {
+        "nose_blend": 0.0,
+        "shape_ratio": 1.0,
+        "nose_volume_m3": 0.061438047365999435,
+        "nose_wetted_m2": 0.8835768765494554,
+        "max_slope": 0.3006133905168794,
+        "monotone": true,
+        "m0_kg": 542.8748602139599,
+        "range_km": 191.01221440537324,
+        "mach_terminal": 1.657422542634047,
+        "q_max_kPa": 194.84135233538683,
+        "feasible": false,
+        "penalty": 9.916160415587013,
+        "violations": [
+          "R10 static margin"
+        ],
+        "CD0_M1.2": 0.5918581231466409,
+        "xcp_M1.2": 2.4789363950552317,
+        "CD0_M2": 0.3692768326162193,
+        "xcp_M2": 2.319363255923329,
+        "CD0_M3": 0.26938268073041344,
+        "xcp_M3": 1.9621157211732372,
+        "CD0_M4": 0.2172210546070182,
+        "xcp_M4": 1.7272315112248322,
+        "d_nose_volume_pct": 0.0,
+        "d_nose_wetted_pct": 0.0,
+        "d_CD0_pct_M1.2": 0.0,
+        "d_xcp_mm_M1.2": 0.0,
+        "d_CD0_pct_M2": 0.0,
+        "d_xcp_mm_M2": 0.0,
+        "d_CD0_pct_M3": 0.0,
+        "d_xcp_mm_M3": 0.0,
+        "d_CD0_pct_M4": 0.0,
+        "d_xcp_mm_M4": 0.0
+      },
+      {
+        "nose_blend": 0.2,
+        "shape_ratio": 0.9548667390691546,
+        "nose_volume_m3": 0.060640224578813726,
+        "nose_wetted_m2": 0.8787649741869936,
+        "max_slope": 0.3265087268479148,
+        "monotone": true,
+        "m0_kg": 542.7862827152718,
+        "range_km": 192.99932089035667,
+        "mach_terminal": 1.6697616166169458,
+        "q_max_kPa": 197.75323626964538,
+        "feasible": false,
+        "penalty": 9.581798967134873,
+        "violations": [
+          "R10 static margin"
+        ],
+        "CD0_M1.2": 0.5855603622257676,
+        "xcp_M1.2": 2.4814363880787553,
+        "CD0_M2": 0.36475896256917584,
+        "xcp_M2": 2.3222700503462583,
+        "CD0_M3": 0.26544235378353065,
+        "xcp_M3": 1.9659100660630247,
+        "CD0_M4": 0.21349407674826396,
+        "xcp_M4": 1.7315919393828458,
+        "d_nose_volume_pct": -1.2985809630845058,
+        "d_nose_wetted_pct": -0.5445935141776492,
+        "d_CD0_pct_M1.2": -1.0640659770606797,
+        "d_xcp_mm_M1.2": 2.499993023523661,
+        "d_CD0_pct_M2": -1.2234371745001305,
+        "d_xcp_mm_M2": 2.906794422929515,
+        "d_CD0_pct_M3": -1.4627246771020563,
+        "d_xcp_mm_M3": 3.794344889787471,
+        "d_CD0_pct_M4": -1.7157535053390016,
+        "d_xcp_mm_M4": 4.3604281580136295
+      },
+      {
+        "nose_blend": 0.4,
+        "shape_ratio": 0.9199066730790487,
+        "nose_volume_m3": 0.05985150651741479,
+        "nose_wetted_m2": 0.8739720615612698,
+        "max_slope": 0.3524040631789503,
+        "monotone": true,
+        "m0_kg": 542.6980547796575,
+        "range_km": 194.57987890161846,
+        "mach_terminal": 1.6713481534665038,
+        "q_max_kPa": 198.12920831966625,
+        "feasible": false,
+        "penalty": 9.352607158393972,
+        "violations": [
+          "R10 static margin"
+        ],
+        "CD0_M1.2": 0.5806484074405809,
+        "xcp_M1.2": 2.4839105736795473,
+        "CD0_M2": 0.36123295641083525,
+        "xcp_M2": 2.3251467229258056,
+        "CD0_M3": 0.26237069960729753,
+        "xcp_M3": 1.9696647389376447,
+        "CD0_M4": 0.2105926105335254,
+        "xcp_M4": 1.7359064951334708,
+        "d_nose_volume_pct": -2.582342565565743,
+        "d_nose_wetted_pct": -1.087037839389171,
+        "d_CD0_pct_M1.2": -1.8939869654002628,
+        "d_xcp_mm_M1.2": 4.974178624315595,
+        "d_CD0_pct_M2": -2.1782780545412272,
+        "d_xcp_mm_M2": 5.783467002476783,
+        "d_CD0_pct_M3": -2.6029814181458777,
+        "d_xcp_mm_M3": 7.5490177644075285,
+        "d_CD0_pct_M4": -3.051474032056678,
+        "d_xcp_mm_M4": 8.674983908638634
+      },
+      {
+        "nose_blend": 0.6,
+        "shape_ratio": 0.8950273381156185,
+        "nose_volume_m3": 0.059071893181802684,
+        "nose_wetted_m2": 0.8691981457344328,
+        "max_slope": 0.37829939950998565,
+        "monotone": true,
+        "m0_kg": 542.610176537117,
+        "range_km": 195.60113336214445,
+        "mach_terminal": 1.6812501606115065,
+        "q_max_kPa": 200.48382062905603,
+        "feasible": false,
+        "penalty": 9.076199385413382,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ],
+        "CD0_M1.2": 0.577109668920715,
+        "xcp_M1.2": 2.4863589427849573,
+        "CD0_M2": 0.35868980357950553,
+        "xcp_M2": 2.3279932612561933,
+        "CD0_M3": 0.26015982614268185,
+        "xcp_M3": 1.973379718101265,
+        "CD0_M4": 0.20850915536325085,
+        "xcp_M4": 1.7401751493166386,
+        "d_nose_volume_pct": -3.8512848074436223,
+        "d_nose_wetted_pct": -1.627332176366414,
+        "d_CD0_pct_M1.2": -2.491890142102815,
+        "d_xcp_mm_M1.2": 7.422547729725615,
+        "d_CD0_pct_M2": -2.866962696172337,
+        "d_xcp_mm_M2": 8.63000533286451,
+        "d_CD0_pct_M3": -3.423699906291089,
+        "d_xcp_mm_M3": 11.263996928027709,
+        "d_CD0_pct_M4": -4.010614560143977,
+        "d_xcp_mm_M4": 12.94363809180643
+      },
+      {
+        "nose_blend": 0.7,
+        "shape_ratio": 0.8863430009006295,
+        "nose_volume_m3": 0.05868550078616669,
+        "nose_wetted_m2": 0.8668183127495056,
+        "max_slope": 0.3912470676755034,
+        "monotone": true,
+        "m0_kg": 542.5663685715305,
+        "range_km": 196.03695233388765,
+        "mach_terminal": 1.6838024154580853,
+        "q_max_kPa": 201.0929794588393,
+        "feasible": false,
+        "penalty": 9.152946239066353,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ],
+        "CD0_M1.2": 0.5758518593829648,
+        "xcp_M1.2": 2.4875734433155268,
+        "CD0_M2": 0.3577843663748248,
+        "xcp_M2": 2.3294052261992837,
+        "CD0_M3": 0.2593750531326656,
+        "xcp_M3": 1.975222315757176,
+        "CD0_M4": 0.20777215848232086,
+        "xcp_M4": 1.742292254201146,
+        "d_nose_volume_pct": -4.480198668156299,
+        "d_nose_wetted_pct": -1.8966729715014008,
+        "d_CD0_pct_M1.2": -2.704408901001143,
+        "d_xcp_mm_M1.2": 8.6370482602951,
+        "d_CD0_pct_M2": -3.112154683513102,
+        "d_xcp_mm_M2": 10.041970275954881,
+        "d_CD0_pct_M3": -3.7150226475632375,
+        "d_xcp_mm_M3": 13.106594583938813,
+        "d_CD0_pct_M4": -4.349898835447452,
+        "d_xcp_mm_M4": 15.060742976313879
+      },
+      {
+        "nose_blend": 0.8,
+        "shape_ratio": 0.8801507200197448,
+        "nose_volume_m3": 0.05830138457197741,
+        "nose_wetted_m2": 0.864443229821303,
+        "max_slope": 0.4041947358410211,
+        "monotone": true,
+        "m0_kg": 542.5226480449882,
+        "range_km": 196.42132552121757,
+        "mach_terminal": 1.680291737410712,
+        "q_max_kPa": 200.25530784615657,
+        "feasible": false,
+        "penalty": 8.858228041839393,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ],
+        "CD0_M1.2": 0.574933524181896,
+        "xcp_M1.2": 2.4887814863180795,
+        "CD0_M2": 0.3571219015641482,
+        "xcp_M2": 2.330809652924831,
+        "CD0_M3": 0.25880307460647567,
+        "xcp_M3": 1.9770549818422298,
+        "CD0_M4": 0.2072373827517169,
+        "xcp_M4": 1.7443978727475613,
+        "d_nose_volume_pct": -5.105407688718144,
+        "d_nose_wetted_pct": -2.1654761725853566,
+        "d_CD0_pct_M1.2": -2.8595702758567265,
+        "d_xcp_mm_M1.2": 9.845091262847827,
+        "d_CD0_pct_M2": -3.2915498559595413,
+        "d_xcp_mm_M2": 11.446397001502184,
+        "d_CD0_pct_M3": -3.9273520091387737,
+        "d_xcp_mm_M3": 14.939260668992649,
+        "d_CD0_pct_M4": -4.596088474647675,
+        "d_xcp_mm_M4": 17.1663615227291
+      },
+      {
+        "nose_blend": 0.9,
+        "shape_ratio": 0.8764430014772882,
+        "nose_volume_m3": 0.0579195445392348,
+        "nose_wetted_m2": 0.8620728967148926,
+        "max_slope": 0.41714240400653874,
+        "monotone": true,
+        "m0_kg": 542.4790149531653,
+        "range_km": 196.56969073021617,
+        "mach_terminal": 1.6849394932320012,
+        "q_max_kPa": 201.3646687761075,
+        "feasible": false,
+        "penalty": 8.979424911014778,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ],
+        "CD0_M1.2": 0.5743536429108139,
+        "xcp_M1.2": 2.4899830706573365,
+        "CD0_M2": 0.35670167884132403,
+        "xcp_M2": 2.332206539880194,
+        "CD0_M3": 0.25844325091542114,
+        "xcp_M3": 1.9788777136399947,
+        "CD0_M4": 0.206904220253407,
+        "xcp_M4": 1.7464920013039185,
+        "d_nose_volume_pct": -5.726911869129192,
+        "d_nose_wetted_pct": -2.433741806207068,
+        "d_CD0_pct_M1.2": -2.9575466739838907,
+        "d_xcp_mm_M1.2": 11.046675602104816,
+        "d_CD0_pct_M2": -3.405345980088692,
+        "d_xcp_mm_M2": 12.843283956865292,
+        "d_CD0_pct_M3": -4.060925440837826,
+        "d_xcp_mm_M3": 16.76199246675747,
+        "d_CD0_pct_M4": -4.749463339212556,
+        "d_xcp_mm_M4": 19.260490079086257
+      },
+      {
+        "nose_blend": 1.0,
+        "shape_ratio": 0.875213254387245,
+        "nose_volume_m3": 0.057539980687938905,
+        "nose_wetted_m2": 0.8597073129435568,
+        "max_slope": 0.43009007217205647,
+        "monotone": true,
+        "m0_kg": 542.4354692871026,
+        "range_km": 196.59729228065964,
+        "mach_terminal": 1.6859560026578242,
+        "q_max_kPa": 201.6077051916323,
+        "feasible": false,
+        "penalty": 8.862333550742303,
+        "violations": [
+          "R10 static margin",
+          "q_max"
+        ],
+        "CD0_M1.2": 0.574111318124491,
+        "xcp_M1.2": 2.4911781951977545,
+        "CD0_M2": 0.3565230559032382,
+        "xcp_M2": 2.3335958855123096,
+        "CD0_M3": 0.2582950194904556,
+        "xcp_M3": 1.9806905084330475,
+        "CD0_M4": 0.20677213632640204,
+        "xcp_M4": 1.7485746362167038,
+        "d_nose_volume_pct": -6.344711209389386,
+        "d_nose_wetted_pct": -2.701469927451472,
+        "d_CD0_pct_M1.2": -2.998489727199849,
+        "d_xcp_mm_M1.2": 12.241800142522852,
+        "d_CD0_pct_M2": -3.453716991294664,
+        "d_xcp_mm_M2": 14.23262958898075,
+        "d_CD0_pct_M3": -4.115951779043248,
+        "d_xcp_mm_M3": 18.57478725981032,
+        "d_CD0_pct_M4": -4.810269565958814,
+        "d_xcp_mm_M4": 21.343124991871633
+      }
+    ],
+    "wave_share": [
+      {
+        "mach": 1.2,
+        "cd_wave_body_ogive": 0.11074152553442473,
+        "cd_wave_body_spline": 0.0981549760664957,
+        "wave_share_of_cd0_ogive": 0.21910437459828938,
+        "cd0_ogive": 0.5054281811463628,
+        "cd0_spline": 0.4917607680469383,
+        "d_cd0_pct": -2.704125652120426,
+        "d_wave_pct": -11.365699909937055
+      },
+      {
+        "mach": 2.0,
+        "cd_wave_body_ogive": 0.07925777111508348,
+        "cd_wave_body_spline": 0.07024957069483831,
+        "wave_share_of_cd0_ogive": 0.2513322844391771,
+        "cd0_ogive": 0.3153505380016709,
+        "cd0_spline": 0.3055374606104396,
+        "d_cd0_pct": -3.111799793783543,
+        "d_wave_pct": -11.365699909937065
+      },
+      {
+        "mach": 3.0,
+        "cd_wave_body_ogive": 0.06941909785903932,
+        "cd_wave_body_spline": 0.06152913151619538,
+        "wave_share_of_cd0_ogive": 0.30176425526153455,
+        "cd0_ogive": 0.23004413759633272,
+        "cd0_spline": 0.22149876441730626,
+        "d_cd0_pct": -3.7146667888669938,
+        "d_wave_pct": -11.365699909937055
+      },
+      {
+        "mach": 4.0,
+        "cd_wave_body_ogive": 0.06597556221942388,
+        "cd_wave_body_spline": 0.05847697780367036,
+        "wave_share_of_cd0_ogive": 0.3556637180495046,
+        "cd0_ogive": 0.18549983839015255,
+        "cd0_spline": 0.177431390676619,
+        "d_cd0_pct": -4.349571289956378,
+        "d_wave_pct": -11.365699909937055
+      }
+    ],
+    "coupled": {
+      "m0_kg": 551.2714380621717,
+      "range_km": 194.00317000248387,
+      "mach_terminal": 1.675485197729314,
+      "q_max_kPa": 199.11127032253793
+    }
+  },
+  "shape_trade_coupled": {
+    "available": true,
+    "rows": [
+      {
+        "nose_blend": 0.0,
+        "geometry_measured": true,
+        "m0_kg": 552.1007070443278,
+        "x_cg_m": 1.911429644226199,
+        "volume_total": 0.2906960091708153,
+        "volume_cavity": 0.27959193766836427,
+        "mass_structure": 39.17228510871016,
+        "area_wetted_body": 3.519386868647637,
+        "range_km": 188.84925008995341,
+        "mach_terminal": 1.6499760615649628,
+        "q_max_kPa": 193.0945157425838,
+        "static_margin": 0.9980623300008863,
+        "feasible": false,
+        "penalty": 0.5503514836545045,
+        "violations": [
+          "R10 static margin"
+        ],
+        "wall_time_s": 31.46682420000434
+      },
+      {
+        "nose_blend": 0.5,
+        "geometry_measured": true,
+        "m0_kg": 551.6908843612704,
+        "x_cg_m": 1.9124232665245713,
+        "volume_total": 0.28875461945376535,
+        "volume_cavity": 0.2776265518479099,
+        "mass_structure": 39.01208645569926,
+        "area_wetted_body": 3.5056938016873715,
+        "range_km": 192.87343101206056,
+        "mach_terminal": 1.6700785568074084,
+        "q_max_kPa": 197.82831512648286,
+        "static_margin": 1.0056198214887293,
+        "feasible": true,
+        "penalty": 0.5015371676011549,
+        "violations": [],
+        "wall_time_s": 33.58587940002326
+      },
+      {
+        "nose_blend": 0.7,
+        "geometry_measured": true,
+        "m0_kg": 551.2714380621717,
+        "x_cg_m": 1.9131341772329045,
+        "volume_total": 0.28792305483824526,
+        "volume_cavity": 0.27688159889823305,
+        "mass_structure": 38.730948380128275,
+        "area_wetted_body": 3.5031909744818632,
+        "range_km": 193.77550191258706,
+        "mach_terminal": 1.6731108116508386,
+        "q_max_kPa": 198.5473357178333,
+        "static_margin": 1.0183058047587064,
+        "feasible": true,
+        "penalty": 0.5011558527837925,
+        "violations": [],
+        "wall_time_s": 32.221269400033634
+      },
+      {
+        "nose_blend": 0.85,
+        "geometry_measured": true,
+        "m0_kg": 551.141534275496,
+        "x_cg_m": 1.9129528568706988,
+        "volume_total": 0.2874049376939705,
+        "volume_cavity": 0.27632086487352847,
+        "mass_structure": 38.67640957899857,
+        "area_wetted_body": 3.498045682464606,
+        "range_km": 194.30773218180482,
+        "mach_terminal": 1.6739619284263063,
+        "q_max_kPa": 198.7493904162577,
+        "static_margin": 1.0269060443483065,
+        "feasible": true,
+        "penalty": 0.5010377584322692,
+        "violations": [],
+        "wall_time_s": 32.71882279997226
+      },
+      {
+        "nose_blend": 1.0,
+        "geometry_measured": true,
+        "m0_kg": 551.2315155698212,
+        "x_cg_m": 1.9134272003519528,
+        "volume_total": 0.28675878629371365,
+        "volume_cavity": 0.2757793496905848,
+        "mass_structure": 38.80804735646514,
+        "area_wetted_body": 3.4961376862520717,
+        "range_km": 194.3879588874422,
+        "mach_terminal": 1.6717324637198725,
+        "q_max_kPa": 198.22033456438479,
+        "static_margin": 1.0282705579828118,
+        "feasible": true,
+        "penalty": 0.5011195596089284,
+        "violations": [],
+        "wall_time_s": 31.71658819995355
+      }
+    ],
+    "n_failed": 0,
+    "best_blend_by_penalty": 0.85,
+    "interior_optimum": true
+  },
+  "spline_geometry": {
+    "applicable": true,
+    "volume_ntop": 0.28792305483824526,
+    "volume_closed_form": 0.2879414902609377,
+    "volume_rel_err": -6.402489156986935e-05,
+    "area_ntop": 3.5031909744818632,
+    "area_closed_form": 3.502671148113304,
+    "area_rel_err": 0.00014840855637809902,
+    "parts": {
+      "nose": 0.05868550078616669,
+      "cylinder": 0.21262691778577417,
+      "boattail": 0.0166290716889968
+    },
+    "boattail_form": "splined contraction, exact integral",
+    "wall_time_s": 133.0990888000233,
+    "note": "The closed form is the exact integral of the same B-spline nTop revolves, so a discretisation error is not available to hide behind."
+  },
+  "search": {
+    "available": true,
+    "path": "runs/SV-1_spline/size/search_trace.csv",
+    "n_evaluations": 60,
+    "columns": [
+      "eval",
+      "D",
+      "L_total",
+      "f_nose",
+      "m_p_boost",
+      "m_p_sustain",
+      "F_boost",
+      "b_fin",
+      "c_r_fin",
+      "m0",
+      "range_km",
+      "mach_terminal",
+      "q_max_kPa",
+      "feasible",
+      "n_violations"
+    ],
+    "variables_searched_but_not_traced": [
+      "nose_blend",
+      "boattail_blend"
+    ],
+    "n_feasible_in_trace": 17,
+    "best_traced_m0_kg": 551.2714380621717
+  },
+  "wall_time_s": 217.34769940003753
+}

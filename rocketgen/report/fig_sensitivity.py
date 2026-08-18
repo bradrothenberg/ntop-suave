@@ -15,9 +15,16 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 
-from .figstyle import BAD, COOL, GREY, STYLE, load_json, out_path, sensitivity
-from .figstyle import DOE_DIR
-import os
+from .figstyle import (
+    BAD,
+    COOL,
+    GREY,
+    STYLE,
+    lhs_meta,
+    out_path,
+    sensitivity,
+    source_label,
+)
 
 RESPONSE_LABEL: dict[str, str] = {
     "m0_kg": "(a) launch mass m0",
@@ -29,7 +36,7 @@ RESPONSE_LABEL: dict[str, str] = {
 
 def make_figure(path: str | None = None) -> str:
     sens = sensitivity()
-    meta = load_json(os.path.join(DOE_DIR, "lhs.json"))
+    meta = lhs_meta()
     n_samples = meta.get("n_total")
     n_failed = meta.get("n_failed")
     responses = [r for r in RESPONSE_LABEL if r in sens]
@@ -69,8 +76,8 @@ def make_figure(path: str | None = None) -> str:
         fig.text(
             0.012, 0.982,
             "Sensitivity from the %s-sample Latin hypercube over eight variables "
-            "(%s failed samples). Source: runs/SV-1/doe/sensitivity.json."
-            % (n_samples, n_failed),
+            "(%s failed samples). Source: %s."
+            % (n_samples, n_failed, source_label("doe/sensitivity.json")),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
         fig.subplots_adjust(left=0.115, right=0.985, top=0.905, bottom=0.115, hspace=0.55,
@@ -82,4 +89,12 @@ def make_figure(path: str | None = None) -> str:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    from .figstyle import select_study
+
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                     help="which study to draw; spline reads runs/SV-1_spline")
+    select_study(_ap.parse_args().oml)
     print(make_figure())

@@ -898,3 +898,64 @@ exactly the constraint that tells it which way to move.
 
 `tests/test_stack_notebook.py::test_the_default_stack_is_NOT_volume_closed_on_stage_2` asserts the
 shortfall, so it cannot quietly disappear if the defaults change (CLAUDE.md sections 3.1 and 7).
+
+---
+
+## 25. Revolving a real spline, and why `functions.json` cannot be trusted to say no
+
+**nTop can revolve a genuine spline.** No chord polygon is needed. Verified end to end through
+`ntopcl` on 5.53.2: converts, runs, measures.
+
+```
+spline_by_control_points<list<point>,integer>[5.20.0]       -> spline
+    (core.list<point>, integer degree)
+
+core.list<curve_interface>                                  -> list<curve_interface>
+
+profile_from_curves<list<curve_interface>,vector>[5.20.0]   -> new_profile
+    (curve list, NORMAL vector)          the Normal belongs to THIS block
+
+revolve<new_profile,axis,real>[5.20.0]                      -> implicit
+    (new_profile, axis, angle)           NO normal input here
+```
+
+Four traps, each of which alone makes `convert` fail with a bare `Error loading recipe:`:
+
+1. the curve type is **`curve_interface`**, not `curve`, so the list is
+   `core.list<curve_interface>`;
+2. `profile_from_curves` returns **`new_profile`**, not `profile`, and there is no props bridge
+   from it to `implicit_2d` - you must use the `new_profile` revolve overload;
+3. the Normal vector is **dimensionless** (`"units": {}`), not a length;
+4. the degree argument is a plain integer literal, `{"type": "integer", "value": {"val": 3}}`.
+
+All four blocks need `Recipe.raw_block`, because **none of them are in the vendored
+`functions.json`**, and `types.json` is missing `spline`, `curve_interface`, `polycurve` and
+`new_profile` as well.
+
+### The lesson that generalises
+
+Section 6 of `docs/REFERENCE.md` and CLAUDE.md section 4 point 6 already say the universe drifts
+from the installed build. This is the sharper statement: **the universe is missing whole BLOCKS
+and whole TYPES, not merely stale revisions.** So a block being absent from `functions.json` is
+NOT evidence that nTop cannot do the thing.
+
+That mistake was made here. `rocketgen/oml_spline.py` was written asserting "a `curve` CANNOT be
+revolved, verified against the block universe". It was wrong, and the whole polygon-sampling
+approach in that module exists because of it. The polygon route is validated and correct, but it
+is not the cheapest or the most accurate option.
+
+### How to find block ids, since guessing does not work
+
+27 plausible id combinations were tried and all were rejected. Two methods do work:
+
+- `ntopcl exportjson <notebook>.ntop out.json --ext --dev-blocks-on=True` on a notebook that
+  already uses the block, then read the real `func` strings out of the JSON;
+- build the chain up ONE block at a time, converting after each. `convert` either loads the
+  recipe or says `Error loading recipe`, which isolates the offending block immediately. That is
+  how the revolve overload was found once the first three blocks were known.
+
+### Cost and accuracy
+
+Converted in 24 s, ran in 29 s. `mass_properties` volume agreed with a Python analytic
+integration of the same clamped B-spline to **-0.0255 percent**, inside the 0.05 percent relative
+error requested of the block. The GUI log reports the revolve itself at 616,600 ns.

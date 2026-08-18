@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import json
+import argparse
 import math
 import os
 import re
@@ -22,8 +23,31 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
 RUNS = os.path.join(REPO, "runs")
+
+# Which study to curate. `--oml spline` reads runs/SV-1_spline and writes examples/SV-1-spline,
+# so the ogive example is never overwritten and the two can be read side by side. CLAUDE.md
+# section 11: runs/ is gitignored, so nothing ships unless it is copied in here.
 SV1 = os.path.join(RUNS, "SV-1")
 EX = os.path.join(REPO, "examples", "SV-1")
+
+
+def select_study(oml: str) -> None:
+    """Point the curation at the ogive study or the spline study."""
+    global SV1, EX, DIRS
+    if oml == "spline":
+        SV1 = os.path.join(RUNS, "SV-1_spline")
+        EX = os.path.join(REPO, "examples", "SV-1-spline")
+    else:
+        SV1 = os.path.join(RUNS, "SV-1")
+        EX = os.path.join(REPO, "examples", "SV-1")
+    DIRS = {
+        "design": os.path.join(EX, "01_design"),
+        "geometry": os.path.join(EX, "02_geometry"),
+        "trade": os.path.join(EX, "03_trade_study"),
+        "figures": os.path.join(EX, "04_figures"),
+        "validation": os.path.join(EX, "05_validation"),
+    }
+
 
 DIRS = {
     "design": os.path.join(EX, "01_design"),
@@ -277,7 +301,7 @@ def _regenerate_notebook(dest_dir: str) -> bool:
         recipe_path = os.path.join(dest_dir, "sv1_recipe.json")
         recipe.write_json(recipe_path)
         scrub_paths(recipe_path)
-        log("wrote examples/SV-1/02_geometry/sv1_recipe.json")
+        log(f"wrote {os.path.relpath(DIRS['geometry'], REPO)}/sv1_recipe.json")
 
         runner = NtopRunner()
         runner.convert(recipe_path, os.path.join(dest_dir, "sv1.ntop"))
@@ -339,7 +363,7 @@ def build_geometry(meas: dict) -> None:
             dv, g, export_stl=True, export_step=True, export_implicit=True, area_stations=16
         )
         recipe.write_json(os.path.join(g, "sv1_recipe.json"))
-        log("wrote examples/SV-1/02_geometry/sv1_recipe.json")
+        log(f"wrote {os.path.relpath(DIRS['geometry'], REPO)}/sv1_recipe.json")
     except Exception as exc:                              # noqa: BLE001
         log(f"could not emit the recipe JSON: {type(exc).__name__}: {exc}")
 
@@ -530,6 +554,12 @@ Every figure in the report, as PNG. All are produced by scripts under `rocketgen
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                    help="which study to curate; spline reads runs/SV-1_spline")
+    args = ap.parse_args()
+    select_study(args.oml)
+
     if not os.path.isdir(SV1):
         log(f"no run artefacts at {SV1}. Run run_sv1.py first.")
         return 1
@@ -553,14 +583,14 @@ def main() -> int:
     copy(os.path.join(SV1, "report", "SV1_engineering_report.pdf"), EX)
     with open(os.path.join(EX, "README.md"), "w", encoding="utf-8") as f:
         f.write(README)
-    log("wrote examples/SV-1/README.md")
+    log(f"wrote {os.path.relpath(EX, REPO)}/README.md")
 
     total = sum(
         os.path.getsize(os.path.join(r, n))
         for r, _, ns in os.walk(EX)
         for n in ns
     )
-    log(f"done. examples/SV-1 is {total/1e6:.1f} MB")
+    log(f"done. {os.path.relpath(EX, REPO)} is {total/1e6:.1f} MB")
     return 0
 
 

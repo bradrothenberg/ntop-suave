@@ -25,6 +25,7 @@ from .figstyle import (
     grid_rows,
     out_path,
     point_ntop,
+    source_label,
 )
 
 #: Short labels for the violated-constraint annotation, so the panels stay readable.
@@ -132,8 +133,8 @@ def make_figure(path: str | None = None) -> str:
         fig.text(
             0.012, 0.965,
             "SV-1 trade study: 45-node full factorial over D, sustain propellant and nose "
-            "fineness.\n%d of %d nodes are feasible. Source: runs/SV-1/doe/grid.csv."
-            % (n_feasible, len(rows)),
+            "fineness.\n%d of %d nodes are feasible. Source: %s."
+            % (n_feasible, len(rows), source_label("doe/grid.csv")),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
         fig.subplots_adjust(left=0.075, right=0.885, top=0.855, bottom=0.185, wspace=0.09)
@@ -144,4 +145,12 @@ def make_figure(path: str | None = None) -> str:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    from .figstyle import select_study
+
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                     help="which study to draw; spline reads runs/SV-1_spline")
+    select_study(_ap.parse_args().oml)
     print(make_figure())

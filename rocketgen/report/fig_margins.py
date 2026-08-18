@@ -14,7 +14,17 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 
-from .figstyle import BAD, GOOD, GREY, STYLE, WARN, out_path, point_analytic, point_ntop
+from .figstyle import (
+    BAD,
+    GOOD,
+    GREY,
+    STYLE,
+    WARN,
+    out_path,
+    point_analytic,
+    point_ntop,
+    source_label,
+)
 
 #: Margins at or below this fraction are drawn as "tight" and labelled.
 TIGHT = 0.05
@@ -81,8 +91,8 @@ def make_figure(path: str | None = None) -> str:
         fig.text(
             0.012, 0.975,
             "Bars are the nTop-coupled result; the red ticks are the same design vector with "
-            "analytic geometry.\nThe shaded band marks margins below %d percent. Source: "
-            "runs/SV-1/converged/point_ntop.json." % int(100 * TIGHT),
+            "analytic geometry.\nThe shaded band marks margins below %d percent. Source: %s."
+            % (int(100 * TIGHT), source_label("converged/point_ntop.json")),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
         fig.subplots_adjust(left=0.155, right=0.985, top=0.825, bottom=0.125)
@@ -93,4 +103,12 @@ def make_figure(path: str | None = None) -> str:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    from .figstyle import select_study
+
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                     help="which study to draw; spline reads runs/SV-1_spline")
+    select_study(_ap.parse_args().oml)
     print(make_figure())

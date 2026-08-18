@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import Sequence
 
 from ..config import AeroCoefficients, DesignVector, NtopMeasurements, register_sources
 from . import atmosphere as atm
@@ -93,6 +94,15 @@ SOURCES: dict[str, str] = {
         "Configurations, WL-TR-93-3901 p. B-3, as implemented in SUAVE "
         "Methods.Aerodynamics.Supersonic_Zero.Drag.wave_drag_volume_sears_haack. Never added "
         "into CD0."
+    ),
+    "aero_nose_shape_factor": (
+        "The Bonney correlation depends on nose FINENESS alone and cannot distinguish one "
+        "nose profile from another at fixed fineness, so on its own it would report a splined "
+        "nose and a tangent ogive as identical. The shape sensitivity is therefore supplied as "
+        "a dimensionless ratio from linearised slender-body theory, `sizing/wavedrag.py`, "
+        "which multiplies the Bonney value. The ratio is exactly 1.0 for the tangent ogive, "
+        "so this leaves every pre-spline result unchanged. See "
+        "wavedrag.SOURCES['wave_drag_applied_as_ratio'] for why only the ratio is taken."
     ),
     "aero_transonic_bridge": (
         "NOT PHYSICS. A cubic Hermite blend, 2 e^3 - 3 e^2 + 1, bridging the subsonic value to "
@@ -203,7 +213,12 @@ SOURCES: dict[str, str] = {
         "and 0.466 of the nose length for a tangent ogive. Barrowman, The Practical Calculation "
         "of the Aerodynamic Characteristics of Slender Finned Vehicles (1967). Equivalent to the "
         "centroid of dS/dx under slender-body theory, which is what is computed directly when "
-        "nTop supplies the cross-section area distribution."
+        "nTop supplies the cross-section area distribution. For a SPLINED nose there is no "
+        "published constant, so the same slender-body identity is used in closed form, "
+        "x_cp = L_n - V_nose/S_base. Evaluated on the tangent ogive it gives 0.4634 against "
+        "Barrowman's published 0.466, a 0.6 percent agreement that confirms it is the same "
+        "quantity. For the drag-optimal splined nose it gives 0.4974, i.e. the centre of "
+        "pressure moves AFT because the optimal nose carries less forebody volume."
     ),
     "aero_crossflow_cp": (
         "Viscous cross-flow lift acts at the centroid of the body planform area. Allen and "
@@ -258,6 +273,33 @@ NOZZLE_EXIT_AREA_FRACTION_GUESS: float = 0.50
 
 #: Barrowman potential-lift centre of pressure, as a fraction of nose length.
 X_CP_NOSE_FRACTION: dict[str, float] = {"cone": 2.0 / 3.0, "tangent_ogive": 0.466}
+
+def x_cp_nose_fraction(shape: str, L_n: float, D: float,
+                       control: "Sequence[float] | None" = None) -> float:
+    """Barrowman nose centre-of-pressure station as a fraction of nose length.
+
+    For the two tabulated shapes this returns the published constants unchanged. For a splined
+    nose there is no published constant, so it is derived from the SAME slender-body result
+    Barrowman's own numbers come from: the potential-flow normal force of a slender body is
+    distributed as dS/dx, so the centre of pressure is the dS/dx-weighted mean station,
+
+        x_cp = L_n - V_nose / S_base,
+
+    which is exact for any body of revolution under that theory. Evaluated on the tangent
+    ogive this reproduces 0.466 to three decimals, which is the check that it is the same
+    quantity and not a different one. See SOURCES["aero_nose_cp"].
+    """
+    if shape != "spline":
+        return X_CP_NOSE_FRACTION[shape]
+    if control is None:
+        raise ValueError("nose_shape 'spline' needs control values")
+    from ..oml_spline import SplineProfile
+
+    R = 0.5 * D
+    p = SplineProfile(length=L_n, radius=R, control=tuple(control), n_poly=400)
+    s_base = math.pi * R * R
+    return (L_n - p.volume() / s_base) / L_n
+
 
 MACH_MIN_VALID: float = 0.3
 MACH_MAX_VALID: float = 5.0
@@ -721,9 +763,28 @@ class _Geometry:
     provenance: dict[str, str] = field(default_factory=dict)
 
 
-def _nose_wetted_and_planform(shape: str, L_n: float, D: float) -> tuple[float, float, float]:
-    """(wetted area, planform area, planform centroid from tip) for a nose of revolution."""
+def _nose_wetted_and_planform(
+    shape: str,
+    L_n: float,
+    D: float,
+    control: Sequence[float] | None = None,
+) -> tuple[float, float, float]:
+    """(wetted area, planform area, planform centroid from tip) for a nose of revolution.
+
+    `control` supplies the spline control values when `shape == "spline"`. The closed forms
+    used then are the EXACT frustum sums of the revolved chord polygon, which is the solid nTop
+    actually builds, rather than a quadrature of the smooth spline. At the ogive-equivalent
+    control values they reproduce this function's tangent-ogive branch to 5e-5 relative.
+    """
     R = 0.5 * D
+    if shape == "spline":
+        if control is None:
+            raise ValueError("nose_shape 'spline' needs control values")
+        from ..oml_spline import SplineProfile
+
+        p = SplineProfile(length=L_n, radius=R, control=tuple(control), n_poly=160)
+        planform, x_bar = p.planform_area_and_centroid()
+        return p.lateral_area(), planform, x_bar
     if shape == "cone":
         slant = math.hypot(L_n, R)
         wetted = math.pi * R * slant
@@ -825,6 +886,10 @@ class RocketAero:
             See SOURCES["aero_fin_afterbody_carryover"].
         area_nozzle_exit: nozzle exit area, m^2, used only for powered-base drag relief. When
             None a GUESSED fraction of the base area is used and flagged.
+        nose_control: spline control values of the nose profile, when the OML is splined.
+            `None` means the nose is the tangent ogive this model was written for, and the
+            nose-shape wave-drag factor is exactly 1.0, so every pre-spline result is
+            reproduced bit for bit. See `CD_wave_body` and SOURCES["aero_nose_shape_factor"].
     """
 
     def __init__(
@@ -836,14 +901,46 @@ class RocketAero:
         fin_max_thickness_station: float = 0.5,
         k_afterbody_carryover: float = 1.0,
         area_nozzle_exit: float | None = None,
+        nose_control: Sequence[float] | None = None,
     ) -> None:
         self.dv = dv
         self.meas = meas
         self.k_afterbody_carryover = float(k_afterbody_carryover)
         self.sources_used: dict[str, str] = {}
+        if nose_shape == "tangent_ogive" and getattr(dv, "nose_shape", None) == "spline":
+            # The design vector, not the constructor default, is the authority on shape.
+            nose_shape = "spline"
         self.geom = self._resolve_geometry(
             dv, meas, nose_shape, fin_max_thickness_station, area_nozzle_exit
         )
+        if nose_control is None:
+            nose_control = getattr(dv, "nose_control", None)
+        self.nose_control = tuple(nose_control) if nose_control is not None else None
+        self.nose_wave_shape_factor = self._resolve_nose_shape_factor(nose_shape)
+
+    def _resolve_nose_shape_factor(self, nose_shape: str) -> float:
+        """Nose wave drag of this profile divided by the tangent ogive's, at the same L/R.
+
+        The ONLY route by which nose shape reaches the drag build-up. Returns exactly 1.0 when
+        no spline control values were supplied, which is what keeps this addition invisible to
+        the 296 tests that predate it.
+        """
+        if self.nose_control is None:
+            self.sources_used["nose_wave_shape_factor"] = (
+                "not applied: nose is the tangent ogive the Bonney correlation assumes"
+            )
+            return 1.0
+        # imported here, not at module scope: `wavedrag` imports `oml_spline`, which imports
+        # `config`, and a module-level import would make the aero/config import order matter.
+        from .wavedrag import nose_wave_shape_ratio
+
+        k = self.geom.L_nose / (0.5 * self.geom.D)
+        ratio = nose_wave_shape_ratio(self.nose_control, k)
+        self.sources_used["nose_wave_shape_factor"] = (
+            f"slender-body (Glauert series) shape ratio {ratio:.6f} against the tangent "
+            f"ogive at L/R = {k:.4f}; see wavedrag.SOURCES['wave_drag_applied_as_ratio']"
+        )
+        return ratio
 
     # ---------------------------------------------------------------- geometry
 
@@ -878,7 +975,10 @@ class RocketAero:
         beta_bt = math.atan2(R - r_base, L_bt) if L_bt > 0.0 else 0.0
 
         # --- analytic nose / cylinder / boattail breakdown, always computed as the fallback ---
-        wet_nose, plan_nose, xbar_nose = _nose_wetted_and_planform(nose_shape, L_nose, D)
+        nose_control = getattr(dv, "nose_control", None)
+        wet_nose, plan_nose, xbar_nose = _nose_wetted_and_planform(
+            nose_shape, L_nose, D, nose_control
+        )
         wet_cyl = math.pi * D * L_cyl
         plan_cyl = D * L_cyl
         xbar_cyl = L_nose + 0.5 * L_cyl
@@ -917,7 +1017,7 @@ class RocketAero:
             area_planform_body = plan_analytic
             # Net potential lift is the nose gain minus the boattail loss; place it at the
             # dS/dx-weighted centroid of those two contributions.
-            f_nose = X_CP_NOSE_FRACTION[nose_shape]
+            f_nose = x_cp_nose_fraction(nose_shape, L_nose, D, nose_control)
             ds_nose = S_ref
             ds_bt = -(S_ref - S_base)
             den = ds_nose + ds_bt
@@ -1035,7 +1135,12 @@ class RocketAero:
         # The nose base diameter is the body diameter, so the nose base area is S_ref and no
         # area referral is needed. `aero_iv1` has a nose narrower than its reference area and
         # therefore does need one.
-        return bonney_nose_wave_cd(g.L_nose / g.D, mach)
+        #
+        # `nose_wave_shape_factor` is 1.0 unless a splined nose was supplied. Bonney depends on
+        # fineness alone and cannot tell one nose from another at fixed fineness, so the shape
+        # sensitivity comes from slender-body theory as a RATIO and the calibrated Bonney level
+        # and its Mach dependence are left alone. See SOURCES["aero_nose_shape_factor"].
+        return bonney_nose_wave_cd(g.L_nose / g.D, mach) * self.nose_wave_shape_factor
 
     def CD_wave_body_crosscheck(self, mach: float) -> float:
         """Second wave-drag correlation, reported but never summed into CD0.

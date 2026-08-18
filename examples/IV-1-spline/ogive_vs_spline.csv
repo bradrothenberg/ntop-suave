@@ -1,0 +1,9 @@
+quantity,unit,tangent ogive,spline,delta,delta percent
+launch mass,kg,592.238,591.05,-1.18778,-0.201
+slant range,m,160934,160934,-2.91038e-11,-0.000
+intercept altitude,m,19948.1,24392.2,+4444.06,+22.278
+intercept Mach,-,4.00424,4.05709,+0.0528546,+1.320
+time to intercept,s,157.799,153.694,-4.10508,-2.601
+pitchover angle,deg,38,38,+0,+0.000
+"lateral g, aerodynamic",g,7.45056,3.83719,-3.61337,-48.498
+ACS thrust,N,39044.8,38860.8,-183.954,-0.471

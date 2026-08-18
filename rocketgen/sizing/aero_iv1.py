@@ -74,6 +74,7 @@ from .aero import (
     NOZZLE_EXIT_AREA_FRACTION_GUESS,
     PROTUBERANCE_FRACTION_GUESS,
     X_CP_NOSE_FRACTION,
+    x_cp_nose_fraction,
     _cp_max_stagnation,
     _frustum_planform_centroid,
     _nose_wetted_and_planform,
@@ -689,7 +690,12 @@ class StackAero:
         self.dv = dv
         self.reqs = reqs
         self.meas = dict(meas) if meas else {}
+        # The design vector, not the constructor default, is the authority on nose shape.
+        if nose_shape == "tangent_ogive" and getattr(dv, "nose_shape", None) == "spline":
+            nose_shape = "spline"
         self.nose_shape = nose_shape
+        self.nose_control = getattr(dv, "nose_control", None)
+        self.nose_wave_shape_factor = self._resolve_nose_shape_factor()
         self.fin_te_gap = float(fin_te_gap)
         self.x_t_fin = float(fin_max_thickness_station)
         self.k_afterbody_carryover = float(k_afterbody_carryover)
@@ -767,8 +773,12 @@ class StackAero:
         D_nose = payload.D
         S_nose = 0.25 * math.pi * D_nose * D_nose
         wet_nose, plan_nose, xbar_nose = _nose_wetted_and_planform(
-            self.nose_shape, L_nose, D_nose
+            self.nose_shape, L_nose, D_nose, self.nose_control
         )
+        # Barrowman tabulates a centre-of-pressure fraction for the cone and the tangent ogive
+        # only. For a splined nose `x_cp_nose_fraction` derives it from the same slender-body
+        # identity those constants come from, x_cp = L - V_nose/S_base.
+        f_cp_nose = x_cp_nose_fraction(self.nose_shape, L_nose, D_nose, self.nose_control)
         prov["nose_shape"] = f"constructor argument: {self.nose_shape}"
 
         # --- march down the stack, accumulating wetted area, planform and dS/dx ---
@@ -777,7 +787,7 @@ class StackAero:
         plan_moment = plan_nose * xbar_nose
         # dS/dx contributions as (net area change, station).
         dsdx: list[tuple[float, float]] = [
-            (S_nose, X_CP_NOSE_FRACTION[self.nose_shape] * L_nose)
+            (S_nose, f_cp_nose * L_nose)
         ]
         shoulder_delta = 0.0
         shoulder_annulus = 0.0
@@ -886,7 +896,8 @@ class StackAero:
         x_cp_potential = (
             sum(d * xx for d, xx in dsdx) / den
             if abs(den) > 1.0e-12
-            else X_CP_NOSE_FRACTION[self.nose_shape] * L_nose
+            else x_cp_nose_fraction(self.nose_shape, dv.L_nose,
+                                    dv.payload_stage.D, self.nose_control) * dv.L_nose
         )
         prov["x_cp_potential"] = (
             ANALYTIC + f" (dS/dx centroid over {len(dsdx)} area change(s))"
@@ -1028,16 +1039,40 @@ class StackAero:
         ff = body_form_factor(g.L_total / g.D_ref)
         return ff * cf * g.area_wetted_body / g.S_ref
 
+    def _resolve_nose_shape_factor(self) -> float:
+        """Nose wave drag of this profile divided by the tangent ogive's, at the same L/R.
+
+        Exactly 1.0 unless the payload-stage nose is splined, so every pre-spline IV-1 number
+        is reproduced. Same construction and same module as `aero.RocketAero`; see
+        wavedrag.SOURCES["wave_drag_applied_as_ratio"].
+        """
+        if self.nose_control is None:
+            return 1.0
+        from .wavedrag import nose_wave_shape_ratio
+
+        dv = self.dv
+        k = dv.L_nose / (0.5 * dv.payload_stage.D)
+        return nose_wave_shape_ratio(self.nose_control, k)
+
     def CD_wave_body(self, mach: float, stage: int) -> float:
         """Forebody wave drag on S_ref.
 
         The Bonney correlation is referenced to the NOSE base area, which for the stack is the
         payload-stage cross-section and NOT the reference area, so it is referred across.
         See SOURCES["aero_body_wave_drag"].
+
+        `nose_wave_shape_factor` is 1.0 unless the nose is splined. Bonney depends on fineness
+        alone and cannot see nose shape, so the shape sensitivity comes from slender-body
+        theory as a ratio and the calibrated Bonney level is left alone.
+
+        NOTE this covers the NOSE only. The interstage flare is a separate S''(x) feature and
+        is charged by `_shoulder_terms`, which integrates the actual contour, so splining the
+        flare shows up there rather than here.
         """
         g = self._geom(stage)
         return (
-            bonney_nose_wave_cd(g.L_nose / g.D_nose_base, mach) * g.S_nose_base / g.S_ref
+            bonney_nose_wave_cd(g.L_nose / g.D_nose_base, mach)
+            * g.S_nose_base / g.S_ref * self.nose_wave_shape_factor
         )
 
     def _shoulder_terms(self, mach: float, stage: int) -> tuple[float, float, float, bool]:

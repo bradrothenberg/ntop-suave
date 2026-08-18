@@ -21,6 +21,7 @@ from .figstyle import (
     STYLE,
     out_path,
     point_ntop,
+    source_label,
 )
 
 
@@ -90,8 +91,9 @@ def make_figure(path: str | None = None) -> str:
         fig.text(
             0.012, 0.982,
             "Launch mass %.1f kg, CG %.3f m from the nose tip, burnout mass %.1f kg. "
-            "nTop-measured share %.1f %%.\nSource: runs/SV-1/converged/point_ntop.json."
-            % (total, ms["x_cg_m"], ms["burnout_kg"], 100.0 * ms["measured_fraction"]),
+            "nTop-measured share %.1f %%.\nSource: %s."
+            % (total, ms["x_cg_m"], ms["burnout_kg"], 100.0 * ms["measured_fraction"],
+               source_label("converged/point_ntop.json")),
             fontsize=7.0, color=GREY, va="top", ha="left",
         )
         fig.subplots_adjust(left=0.185, right=0.985, top=0.875, bottom=0.095, wspace=0.42)
@@ -102,4 +104,12 @@ def make_figure(path: str | None = None) -> str:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    from .figstyle import select_study
+
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--oml", default="ogive", choices=["ogive", "spline"],
+                     help="which study to draw; spline reads runs/SV-1_spline")
+    select_study(_ap.parse_args().oml)
     print(make_figure())

@@ -122,6 +122,8 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from ..config import MATERIALS, RUNS_DIR, NtopMeasurements, register_sources
 from ..config_iv1 import StackDesignVector, StageSpec, StrakeSpec
+from ..oml_spline import DEGREE as SPLINE_DEGREE
+from ..oml_spline import station_fractions
 from .driver import (
     NtopError,
     NtopRunner,
@@ -356,7 +358,22 @@ STRUCTURE_DENSITY = MATERIALS["airframe_al7075"].density         # 2810 kg/m^3
 # block graph changes, so a cached `.ntop` built by an older version of this module is not reused
 # and silently measured as if it were the current one.
 #   1 -> 2: the interstage lateral wetted area is measured, so the stack total is complete.
-RECIPE_VERSION = 2
+RECIPE_VERSION = 3
+
+# Splined-OML input naming. As in `rocket_notebook`, EVERY control value is a notebook input,
+# including the ones the end conditions pin, so the block graph is the same for every shape and
+# one converted `.ntop` serves the whole blend range.
+NOSE_CONTROL_INPUT = "Nose Shape c{i}"
+INTERSTAGE_CONTROL_INPUT = "Interstage Shape c{i}"
+N_SPLINE_POLY = 0   # no polygon any more; kept in the cache key so old caches miss
+
+# nTop's TRUE spline revolve. Same four blocks and the same four traps as
+# `rocket_notebook`; `docs/NTOP_NOTES.md` section 25 has the full account. None of them is in
+# the vendored universe, so all four need `Recipe.raw_block`.
+SPLINE_BLOCK = "spline_by_control_points<list<point>,integer>[5.20.0]"
+PROFILE_FROM_CURVES_BLOCK = "profile_from_curves<list<curve_interface>,vector>[5.20.0]"
+SPLINE_REVOLVE_BLOCK = "revolve<new_profile,axis,real>[5.20.0]"
+LINE_BLOCK = "two_point_line<point,point>"
 
 
 # --------------------------------------------------------------------------------------
@@ -673,6 +690,7 @@ class _Builder:
         dv: StackDesignVector,
         *,
         n_ogive: int,
+        n_poly: int = N_SPLINE_POLY,
         relative_error: float,
         area_relative_error: float,
         mesh_tolerance: float,
@@ -703,6 +721,15 @@ class _Builder:
         self.section_feature_size = float(section_feature_size)
         self.build_stage = build_stage
         self.nose_shape = str(dv.nose_shape)
+        self.interstage_shape = str(getattr(dv, "interstage_shape", "cone"))
+        self.n_poly = int(n_poly)
+        self.n_ctrl = int(getattr(dv, "n_ctrl_oml", 9))
+        # Read from the design vector, which is the single source of truth. These set the
+        # notebook INPUT DEFAULTS; per-design-point values arrive through `-j`.
+        self.nose_control = dv.nose_control if self.nose_shape == "spline" else None
+        self.interstage_control = (
+            dv.interstage_control if self.interstage_shape == "spline" else None
+        )
         self.n_strake = int(dv.strakes.n)
 
         self.r = Recipe(
@@ -798,6 +825,21 @@ class _Builder:
                 iname, "real", default=float(_dotted(dv, path)), dimension=dim,
                 description=f"StackDesignVector.{path}",
             )
+        # Splined-OML control values. Dimensionless: fractions of the run's radius change.
+        for control, template, what in (
+            (self.nose_control, NOSE_CONTROL_INPUT, "nose"),
+            (self.interstage_control, INTERSTAGE_CONTROL_INPUT, "interstage flare"),
+        ):
+            if control is None:
+                continue
+            key = "nose_control" if what == "nose" else "interstage_control"
+            self.inp[key] = [
+                r.add_input(
+                    template.format(i=i), "real", default=float(v),
+                    description=f"{what} spline control value {i}",
+                )
+                for i, v in enumerate(control)
+            ]
         self.inp[MESH_TOLERANCE_INPUT] = r.add_input(
             MESH_TOLERANCE_INPUT, "real", default=self.mesh_tolerance,
             dimension={"length": 1},
@@ -885,6 +927,70 @@ class _Builder:
         pts.append(self._point(length, radius, self._zero(), name="Nose Shoulder"))
         return pts
 
+    def _spline_control_points(
+        self,
+        length: Ref,
+        r_start: Any,
+        r_end: Ref,
+        control: list[Ref],
+        x0: Ref | None,
+        name: str,
+    ) -> list[Ref]:
+        """The control points of one splined run, computed INSIDE nTop.
+
+        Identical construction to `rocket_notebook._spline_control_points`, and deliberately
+        so: the two vehicles must build the same shape family the same way, or a comparison
+        between them means nothing. Axial fractions are the Greville abscissae, which makes
+        `x(u) = x0 + length * u` exact. See `oml_spline.station_fractions`.
+        """
+        r = self.r
+        fracs = station_fractions(len(control))
+        if isinstance(r_start, Ref):
+            dr = self._sub(r_end, r_start, name=f"{name} Radius Change")
+            base: Any = r_start
+        else:
+            dr = r_end
+            base = None
+
+        pts: list[Ref] = []
+        for i, f in enumerate(fracs):
+            y: Any = self._mul(dr, control[i])
+            if base is not None:
+                y = self._add(base, y)
+            x: Any = self._mul(length, r.literal_real(float(f), {}))
+            if x0 is not None:
+                x = self._add(x0, x)
+            pts.append(self._point(x, y, self._zero(), name=f"{name} P{i}"))
+        return pts
+
+    def _spline_curve(self, points: list[Ref], name: str) -> Ref:
+        """A cubic spline through `points`, as a `curve_interface`."""
+        return self.r.raw_block(
+            SPLINE_BLOCK, "spline",
+            [self.r.list_of("point", points, name=f"{name} Control Points"),
+             self.r.literal_integer(SPLINE_DEGREE)],
+            name=name,
+        )
+
+    def _line(self, a: Ref, b: Ref, name: str) -> Ref:
+        """A straight profile edge, kept separate from the splines so corners stay exact."""
+        return self.r.raw_block(LINE_BLOCK, "line_segment", [a, b], name=name)
+
+    def _revolve_curves(self, curves: list[Ref], name: str) -> Ref:
+        """Revolve a closed profile of splines and lines, 360 degrees about the body axis."""
+        r = self.r
+        prof = r.raw_block(
+            PROFILE_FROM_CURVES_BLOCK, "new_profile",
+            [r.list_of("curve_interface", curves, name=f"{name} Curves"),
+             r.literal_vector(0.0, 0.0, -1.0, units={})],
+            name=f"{name} Profile",
+        )
+        return r.raw_block(
+            SPLINE_REVOLVE_BLOCK, "implicit",
+            [prof, self.g["axis"], r.literal_real(2.0 * math.pi, {"angle": 1})],
+            name=name,
+        )
+
     def _cone_nose_points(self, length: Ref, radius: Ref) -> list[Ref]:
         return [
             self._point(self._zero(), self._zero(), self._zero(), name="Nose Tip"),
@@ -900,13 +1006,42 @@ class _Builder:
         """
         r, g = self.r, self.g
 
+        # The axis is needed by every revolve, so it is built before the first one.
+        if "axis" not in g:
+            g["axis"] = r.block(
+                "axis<point,vector>",
+                self._point(self._zero(), self._zero(), self._zero(), name="Axis Origin"),
+                r.literal_vector(1.0, 0.0, 0.0), name="Body Axis",
+            )
+
+        if self.nose_shape == "spline":
+            # TRUE revolved spline: a splined nose, then straight edges for the cylinder, the
+            # flat base and the return along the axis, so every corner stays exact.
+            nose_pts = self._spline_control_points(
+                g["L_nose"], 0.0, g["R2"], self.inp["nose_control"], None, "S2 Nose",
+            )
+            p_shoulder = self._point(g["L_nose"], g["R2"], self._zero(), name="S2 Shoulder")
+            p_rim = self._point(g["x_s2_aft"], g["R2"], self._zero(), name="S2 Base Rim")
+            p_ctr = self._point(g["x_s2_aft"], self._zero(), self._zero(),
+                                name="S2 Base Centre")
+            p_tip = self._point(self._zero(), self._zero(), self._zero(), name="S2 Nose Tip")
+            body = self._revolve_curves([
+                self._spline_curve(nose_pts, "S2 Nose Spline"),
+                self._line(p_shoulder, p_rim, "S2 Cylinder Edge"),
+                self._line(p_rim, p_ctr, "S2 Base Edge"),
+                self._line(p_ctr, p_tip, "S2 Axis Edge"),
+            ], "S2 Body OML")
+            self.g["oml2"] = body
+            return body
+
         if self.nose_shape == "cone":
             pts = self._cone_nose_points(g["L_nose"], g["R2"])
         elif self.nose_shape == "tangent_ogive":
             pts = self._ogive_points(g["L_nose"], g["R2"], self.n_ogive)
         else:
             raise ValueError(
-                f"unsupported nose_shape {self.nose_shape!r}; use 'tangent_ogive' or 'cone'"
+                f"unsupported nose_shape {self.nose_shape!r}; "
+                f"use 'tangent_ogive', 'cone' or 'spline'"
             )
         # cylinder to the stage-2 aft end, then a flat base, then close along the axis
         pts.append(self._point(g["x_s2_aft"], g["R2"], self._zero(), name="S2 Base Rim"))
@@ -919,17 +1054,10 @@ class _Builder:
         # `implicit_2d` ("Profile"). types.json gives `profile` a `profile: implicit_2d`
         # property, so the props chain is the only bridge. NTOP_NOTES.md section 14.
         profile_2d = r.variable("S2 OML Profile", poly.prop("profile"))
-        axis = r.block(
-            "axis<point,vector>",
-            self._point(self._zero(), self._zero(), self._zero(), name="Axis Origin"),
-            r.literal_vector(1.0, 0.0, 0.0),
-            name="Body Axis",
-        )
         body = r.block(
-            "revolve<implicit_2d,axis,real>", profile_2d, axis,
+            "revolve<implicit_2d,axis,real>", profile_2d, g["axis"],
             r.literal_real(2.0 * math.pi, {"angle": 1}), name="S2 Body OML",
         )
-        self.g["axis"] = axis
         self.g["oml2"] = body
         return body
 
@@ -1124,12 +1252,37 @@ class _Builder:
         """
         g = self.g
         zero = self._zero()
-        solid = self.r.block(
-            "cone<point,point,real,real>",
-            self._point(g["x_is_fwd"], zero, zero, name="Interstage Forward Centre"),
-            self._point(g["x_is_aft"], zero, zero, name="Interstage Aft Centre"),
-            g["R2"], g["R1"], name="Interstage OML",
-        )
+        if self.interstage_shape == "spline":
+            # A TRUE revolved splined flare instead of the `cone` primitive.
+            #
+            # A cost note, since CLAUDE.md section 4 point 8 warns that
+            # `surface_area<implicit,real>` tracks the FIELD's complexity rather than the
+            # body's size, and a bare primitive measured the largest of IV-1's five areas in
+            # 0.27 s. A revolved spline is a more complex field than a `cone` primitive, so
+            # this measurement does get slower. It is far cheaper than the chord polygon this
+            # replaced, but it is still not free, and that is expected rather than a
+            # regression.
+            pts = self._spline_control_points(
+                self.inp["L_interstage"], g["R2"], g["R1"], self.inp["interstage_control"],
+                g["x_is_fwd"], "Interstage",
+            )
+            p_fwd = self._point(g["x_is_fwd"], zero, zero, name="Interstage Forward Centre")
+            p_aft = self._point(g["x_is_aft"], zero, zero, name="Interstage Aft Centre")
+            p_rim_f = self._point(g["x_is_fwd"], g["R2"], zero, name="Interstage Fwd Rim")
+            p_rim_a = self._point(g["x_is_aft"], g["R1"], zero, name="Interstage Aft Rim")
+            solid = self._revolve_curves([
+                self._spline_curve(pts, "Interstage Spline"),
+                self._line(p_rim_a, p_aft, "Interstage Aft Edge"),
+                self._line(p_aft, p_fwd, "Interstage Axis Edge"),
+                self._line(p_fwd, p_rim_f, "Interstage Fwd Edge"),
+            ], "Interstage OML")
+        else:
+            solid = self.r.block(
+                "cone<point,point,real,real>",
+                self._point(g["x_is_fwd"], zero, zero, name="Interstage Forward Centre"),
+                self._point(g["x_is_aft"], zero, zero, name="Interstage Aft Centre"),
+                g["R2"], g["R1"], name="Interstage OML",
+            )
         void = self.r.block(
             "offset_implicit<implicit,real_field>", solid, g["neg_t_is"],
             name="Interstage Void",
@@ -1457,6 +1610,7 @@ def build_stack_recipe(
     export_implicit: bool = False,
     area_stations: int = 0,
     n_ogive: int = N_OGIVE,
+    n_poly: int = N_SPLINE_POLY,
     relative_error: float = DEFAULT_RELATIVE_ERROR,
     area_relative_error: float = DEFAULT_AREA_RELATIVE_ERROR,
     cad_tolerance: float = DEFAULT_CAD_TOLERANCE,
@@ -1487,6 +1641,7 @@ def build_stack_recipe(
     b = _Builder(
         dv,
         n_ogive=n_ogive,
+        n_poly=n_poly,
         relative_error=relative_error,
         area_relative_error=area_relative_error,
         mesh_tolerance=mesh_tolerance,
@@ -1532,6 +1687,7 @@ def _topology_key(
     dv: StackDesignVector,
     *,
     n_ogive: int,
+    n_poly: int = N_SPLINE_POLY,
     relative_error: float,
     area_relative_error: float,
     export_stl: bool,
@@ -1556,6 +1712,11 @@ def _topology_key(
         "n_strake": int(dv.strakes.n),
         "nose_shape": str(dv.nose_shape),
         "n_ogive": int(n_ogive),
+        "interstage_shape": str(getattr(dv, "interstage_shape", "cone")),
+        # The control VALUES are inputs and must not enter the key; their COUNT and the
+        # polygon sample count change the block graph and must.
+        "n_ctrl_oml": int(getattr(dv, "n_ctrl_oml", 9)),
+        "n_poly": int(n_poly),
         "relative_error": float(relative_error),
         "area_relative_error": float(area_relative_error),
         "export_stl": bool(export_stl),
@@ -1616,6 +1777,7 @@ def _notebook(
 ) -> StackNotebook:
     opts = dict(
         n_ogive=kw.pop("n_ogive", N_OGIVE),
+        n_poly=kw.pop("n_poly", N_SPLINE_POLY),
         relative_error=kw.pop("relative_error", DEFAULT_RELATIVE_ERROR),
         area_relative_error=kw.pop("area_relative_error", DEFAULT_AREA_RELATIVE_ERROR),
         # Defaults MUST match `measure_stack`, or the two would key different notebooks and
@@ -1699,6 +1861,16 @@ def _input_payload(
             put(_stage_input_name(stage.index, suffix), float(getattr(stage, attr)), dim)
     for path, iname, dim in NTOP_GLOBAL_INPUTS:
         put(iname, float(_dotted(dv, path)), dim)
+    # Splined-OML control values: what makes the shape a per-design-point input, so a blend
+    # sweep reuses one converted notebook.
+    for template_name, control in (
+        (NOSE_CONTROL_INPUT, dv.nose_control),
+        (INTERSTAGE_CONTROL_INPUT, dv.interstage_control),
+    ):
+        if control is None:
+            continue
+        for i, v in enumerate(control):
+            put(template_name.format(i=i), float(v), {})
     put(MESH_TOLERANCE_INPUT, float(mesh_tolerance), {"length": 1})
 
     for iname, path in ((STL_PATH_INPUT, stl_path), (STEP_PATH_INPUT, step_path),

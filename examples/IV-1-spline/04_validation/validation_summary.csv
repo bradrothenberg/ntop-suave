@@ -1,0 +1,16 @@
+area,check,result,unit
+wavedrag,"Sears-Haack D/q vs 128 V^2/(pi L^4), 4001 stations",4.492e-05,relative
+wavedrag,von Karman ogive D/q vs closed form,1.274e-05,relative
+wavedrag,von Karman C_D on base vs (d/L)^2,1.274e-05,relative
+wavedrag,optimum Glauert shape factor vs 4/pi,6.787e-05,relative
+wavedrag,"Glauert series vs direct double integration, 1000 points",1.464e-02,relative
+wavedrag,shape ratio at the ogive control values (must be exactly 1),1.000000,-
+geometry,"nTop stage-2 volume vs exact integral, spline",+0.0205,percent
+geometry,"nTop stage-2 volume vs quadrature, ogive",-0.0091,percent
+reflight,"spline re-flight vs converged.json, all fields",1.0e-9,relative tolerance
+reflight,"ogive re-flight vs converged.json, all fields",1.0e-9,relative tolerance
+constraints,"constraints met, spline",15 of 15,-
+constraints,"constraints met, ogive",15 of 15,-
+provenance,registered sources with every owning module imported,161,-
+provenance,flagged sources,57,-
+calibration,CD0 calibration applied to IV-1 (OPEN DEFECT),no,-
