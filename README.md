@@ -96,12 +96,47 @@ rocketgen/
   sizing/         atmosphere, aero, propulsion, trajectory, masses, and the coupling loop
   doe.py          factorial and Latin hypercube trade studies
   report/         scripted figures and PDF assembly
-tests/            296 tests
+tests/            690 tests in three tiers: fast, medium, slow
 examples/SV-1/    the reference result: report PDF, figures, converged design, trade study
 docs/             the nTop toolchain record
 ```
 
 `rocketgen/sizing/loop.py::converge_point` is the coupling. Start there.
+
+---
+
+## Running the tests
+
+Three tiers, applied by module in `tests/conftest.py`. Measured on a developer workstation:
+
+| tier | tests | wall clock | needs |
+|---|---|---|---|
+| `fast` | 297 | about 11 s | SUAVE only |
+| `medium` | 267 | about 85 s | SUAVE only |
+| `slow` | 126 | about 11 min | SUAVE, a licensed `ntopcl`, and the nTop block universe |
+
+```bash
+.venv/Scripts/python.exe -m pytest -m fast
+```
+
+```bash
+.venv/Scripts/python.exe -m pytest -m "fast or medium"
+```
+
+```bash
+.venv/Scripts/python.exe -m pytest -m slow
+```
+
+`fast` is closed form and analytic. `medium` integrates trajectories and runs trade studies. `slow`
+is every test that spawns a real `ntopcl` process, and it is slow because conversion evaluates the
+notebook and measurement queries implicit fields; the slowest single test in `fast` or `medium` is
+5.65 s.
+
+**CI runs `fast` and `medium` only.** The `slow` tier cannot run on a hosted runner: `ntopcl` is
+licensed, and the block universe it needs is nTop's property and is not redistributable. Those
+tests skip automatically when either is missing, and the CI summary states that the geometry path
+was not exercised. A green CI run is not evidence that geometry generation works; run `-m slow`
+locally for that.
 
 ---
 

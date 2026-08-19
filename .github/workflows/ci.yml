@@ -1,0 +1,202 @@
+name: CI
+
+# Three tiers, defined and applied in tests/conftest.py. Measured on a developer workstation:
+#
+#   fast    297 tests   about 11 s    closed form and analytic
+#   medium  267 tests   about 85 s    trajectory integration and trade studies
+#   slow    126 tests   about 11 min  spawns a real ntopcl process
+#
+# fast and medium run here on every push. slow CANNOT run on a hosted runner: ntopcl is licensed,
+# and the nTop block universe it needs is nTop's property and is not redistributable, so
+# vendor/functions.json is gitignored. The slow job below therefore targets a self-hosted runner
+# and is opt-in. When it does not run, the summary says so, because a green hosted run has not
+# exercised the geometry path at all.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_slow:
+        description: "Also run the slow nTop tier (needs a self-hosted runner with nTop)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  # Bump when scripts/bootstrap.py changes what it fetches, to invalidate the SUAVE cache.
+  SUAVE_CACHE_VERSION: v1
+
+jobs:
+  fast:
+    name: fast tier
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      # SUAVE is LGPL 2.1 and is not redistributed in this repo, so bootstrap.py clones it.
+      # Caching it keeps that clone off the critical path on every run.
+      - name: Cache vendored SUAVE
+        id: suave-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/SUAVE
+          key: suave-${{ env.SUAVE_CACHE_VERSION }}-${{ hashFiles('scripts/bootstrap.py') }}
+
+      - name: Install the project
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Fetch SUAVE
+        if: steps.suave-cache.outputs.cache-hit != 'true'
+        run: uv run --python .venv/bin/python scripts/bootstrap.py
+
+      # nTop absence is not a setup failure, so this is a real gate now rather than a tolerated
+      # one: it fails if SUAVE does not import, and only logs the missing nTop.
+      - name: Environment check
+        run: uv run --python .venv/bin/python scripts/bootstrap.py --check
+
+      - name: Guard the tiering itself
+        run: uv run --python .venv/bin/python -m pytest tests/test_tiers.py -q
+
+      - name: Run the fast tier
+        run: uv run --python .venv/bin/python -m pytest tests -m fast -q --durations=10
+
+      # The slow tier auto-skips when nTop is absent. That skip path is what keeps a hosted run
+      # green, so it has to be exercised rather than assumed. NTOP_SKIP forces it, because the
+      # resolver falls back to the standard install path and cannot otherwise be made to fail.
+      - name: Prove the slow tier skips cleanly without nTop
+        env:
+          NTOP_SKIP: "1"
+        run: uv run --python .venv/bin/python -m pytest tests -m slow -q
+
+      # A typo in -m deselects everything and would otherwise exit 0. conftest turns that into a
+      # usage error; confirm the guard is live, so a future refactor cannot quietly remove it.
+      - name: Confirm a bad tier name fails instead of running nothing
+        run: |
+          if uv run --python .venv/bin/python -m pytest tests -m definitely-not-a-tier -q; then
+            echo "::error::a bad -m expression exited 0; the conftest guard is not working"
+            exit 1
+          fi
+          echo "guard is live: a bad tier name is rejected"
+
+  medium:
+    name: medium tier
+    needs: fast
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Cache vendored SUAVE
+        id: suave-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/SUAVE
+          key: suave-${{ env.SUAVE_CACHE_VERSION }}-${{ hashFiles('scripts/bootstrap.py') }}
+
+      - name: Install the project
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Fetch SUAVE
+        if: steps.suave-cache.outputs.cache-hit != 'true'
+        run: uv run --python .venv/bin/python scripts/bootstrap.py
+
+      - name: Run the medium tier
+        run: uv run --python .venv/bin/python -m pytest tests -m medium -q --durations=15
+
+      # The physics validation is the reason to trust any number this repo produces, so state
+      # plainly in the run summary what was and was not covered.
+      - name: Summarise coverage
+        if: always()
+        run: |
+          {
+            echo "### Test coverage for this run"
+            echo
+            echo "| tier | ran here | why |"
+            echo "|---|---|---|"
+            echo "| fast | yes | closed form and analytic |"
+            echo "| medium | yes | trajectory integration and trade studies |"
+            echo "| slow | **NO** | needs a licensed \`ntopcl\` and the non-redistributable nTop block universe |"
+            echo
+            echo "The geometry path was **not** exercised. The nTop notebook authoring, conversion"
+            echo "and measurement tests live in the slow tier and cannot run on a hosted runner."
+            echo "Run them locally with \`pytest -m slow\`, or on a self-hosted runner with nTop"
+            echo "installed via the workflow_dispatch input."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  slow:
+    name: slow tier (nTop, self-hosted)
+    needs: medium
+    # Opt-in only. Runs when dispatched with run_slow, or when a PR carries the run-ntop-tests
+    # label. Without a self-hosted runner registered for these labels the job simply never
+    # starts, and because it is conditional it never blocks a PR.
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_slow) ||
+      contains(github.event.pull_request.labels.*.name, 'run-ntop-tests')
+    runs-on: [self-hosted, windows, ntop]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the project
+        run: |
+          uv venv --python ${{ env.PYTHON_VERSION }} .venv
+          uv pip install --python .venv/Scripts/python.exe -e ".[dev]"
+
+      # NTOP_UNIVERSE_DIR must be set on the runner, pointing at a directory holding
+      # functions.json, types.json and type_defaults.json. Those files are not in this repo.
+      - name: Fetch SUAVE and locate the nTop block universe
+        run: uv run --python .venv/Scripts/python.exe scripts/bootstrap.py
+
+      # --require-ntop makes a missing ntopcl or block universe fail HERE, which is correct: this
+      # is the one job whose whole purpose is to exercise the geometry path.
+      - name: Confirm nTop actually resolved
+        run: uv run --python .venv/Scripts/python.exe scripts/bootstrap.py --check --require-ntop
+
+      # The slow tier auto-skips when nTop is missing, which would make a broken runner look
+      # green. Require that tests actually PASSED, rather than merely that none skipped: a
+      # legitimate run may skip an individual case, but it must not skip the whole tier.
+      - name: Run the slow tier
+        run: |
+          uv run --python .venv/Scripts/python.exe -m pytest tests -m slow -q --durations=20 | tee slow.log
+          if ! grep -qE "[0-9]+ passed" slow.log; then
+            echo "::error::the slow tier ran no tests; nTop did not resolve on this runner"
+            exit 1
+          fi
+
+      - name: Upload nTop artefacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ntop-run-logs
+          path: |
+            runs/**/*.log
+            runs/**/*.json
+          retention-days: 7
+          if-no-files-found: ignore
