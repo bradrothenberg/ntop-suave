@@ -66,10 +66,9 @@ jobs:
         if: steps.suave-cache.outputs.cache-hit != 'true'
         run: uv run --python .venv/bin/python scripts/bootstrap.py
 
-      # Reports what resolved and what did not. Exits non-zero when nTop is absent, which is the
-      # normal state here, so the failure is tolerated and only the log matters.
+      # nTop absence is not a setup failure, so this is a real gate now rather than a tolerated
+      # one: it fails if SUAVE does not import, and only logs the missing nTop.
       - name: Environment check
-        continue-on-error: true
         run: uv run --python .venv/bin/python scripts/bootstrap.py --check
 
       - name: Guard the tiering itself
@@ -175,8 +174,10 @@ jobs:
       - name: Fetch SUAVE and locate the nTop block universe
         run: uv run --python .venv/Scripts/python.exe scripts/bootstrap.py
 
+      # --require-ntop makes a missing ntopcl or block universe fail HERE, which is correct: this
+      # is the one job whose whole purpose is to exercise the geometry path.
       - name: Confirm nTop actually resolved
-        run: uv run --python .venv/Scripts/python.exe scripts/bootstrap.py --check
+        run: uv run --python .venv/Scripts/python.exe scripts/bootstrap.py --check --require-ntop
 
       # The slow tier auto-skips when nTop is missing, which would make a broken runner look
       # green. Require that tests actually PASSED, rather than merely that none skipped: a

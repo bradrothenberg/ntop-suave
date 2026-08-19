@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+import traceback
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -143,8 +144,18 @@ def link_universe() -> bool:
 # --------------------------------------------------------------------------------------
 
 
-def check() -> int:
-    ok = True
+def check(require_ntop: bool = False) -> int:
+    """Report what resolved. Exit code reflects only what is REQUIRED.
+
+    SUAVE is always required: nothing in the repo runs without it. nTop is optional, because the
+    aerodynamics, propulsion, trajectory, mass and trade-study modules have no nTop dependency at
+    all, and a hosted CI runner can never have it: `ntopcl` is licensed and the block universe is
+    not redistributable. Failing the exit code on a missing nTop made a normal hosted CI state look
+    like a broken setup, so `require_ntop` has to be asked for explicitly. The self-hosted runner
+    that does run the geometry tier passes it.
+    """
+    suave_ok = True
+    ntop_ok = True
 
     if suave_present():
         sys.path.insert(0, VENDOR)
@@ -155,10 +166,15 @@ def check() -> int:
         except Exception as exc:                          # noqa: BLE001
             log(f"SUAVE present but does NOT import: {type(exc).__name__}: {exc}")
             log("  numpy must be < 2, scipy < 1.14, setuptools < 81. See pyproject.toml.")
-            ok = False
+            # A one-line message is not enough to diagnose an import failure that only happens on
+            # one platform. Print the whole traceback: a setup script that cannot say WHY is of
+            # little use to whoever has to fix it.
+            log("  full traceback follows:")
+            traceback.print_exc()
+            suave_ok = False
     else:
         log("SUAVE missing. Run without --check to fetch it.")
-        ok = False
+        suave_ok = False
 
     if universe_present():
         with open(os.path.join(VENDOR, "functions.json"), encoding="utf-8") as f:
@@ -166,7 +182,7 @@ def check() -> int:
         log(f"block universe: OK ({n} blocks)")
     else:
         log("block universe missing. Geometry generation will not work.")
-        ok = False
+        ntop_ok = False
 
     ntopcl = os.environ.get("NTOPCL", r"C:/Program Files/nTopology/nTopology/ntopcl.exe")
     if os.path.isfile(ntopcl):
@@ -175,27 +191,41 @@ def check() -> int:
             log(f"ntopcl: OK ({out.stdout.decode(errors='replace').strip().splitlines()[0]})")
         except Exception as exc:                          # noqa: BLE001
             log(f"ntopcl found but would not run: {exc}")
-            ok = False
+            ntop_ok = False
     else:
         log(f"ntopcl not found at {ntopcl}. Set the NTOPCL environment variable.")
         log("  Geometry generation needs it. The physics modules do not.")
-        ok = False
+        ntop_ok = False
 
-    return 0 if ok else 1
+    if not ntop_ok:
+        log(
+            "nTop is unavailable, so the slow test tier will skip. That is expected on a hosted "
+            "runner and is not a setup failure."
+            + ("  It IS a failure here, because --require-ntop was given." if require_ntop else "")
+        )
+
+    failed = (not suave_ok) or (require_ntop and not ntop_ok)
+    return 1 if failed else 0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="verify only, change nothing")
+    ap.add_argument(
+        "--require-ntop",
+        action="store_true",
+        help="treat a missing ntopcl or block universe as a failure. Off by default, because a "
+        "hosted CI runner can never have them and the physics modules do not need them.",
+    )
     args = ap.parse_args()
 
     if args.check:
-        return check()
+        return check(require_ntop=args.require_ntop)
 
     fetch_suave()
     link_universe()
     print()
-    return check()
+    return check(require_ntop=args.require_ntop)
 
 
 if __name__ == "__main__":
