@@ -40,6 +40,17 @@ exclude = ["vendor*", "runs*", "tests*", "examples*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# --strict-markers rejects a marker used in code that is not declared below. It does NOT catch a
+# typo in a -m expression: `pytest -m fats` deselects everything and exits 0. That silent-empty-run
+# failure mode is guarded separately, in tests/conftest.py, which validates the -m expression
+# against these names and fails when a tier selects nothing.
+addopts = "--strict-markers"
+markers = [
+    "fast: closed-form and analytic; the inner loop",
+    "medium: integrates trajectories and runs trade studies",
+    "slow: spawns a real ntopcl process; cannot run on a hosted CI runner",
+    "ntop: requires a licensed ntopcl and the nTop block universe",
+]
 filterwarnings = [
     # SUAVE's bundled pint imports pkg_resources on every import.
     "ignore:pkg_resources is deprecated:UserWarning",

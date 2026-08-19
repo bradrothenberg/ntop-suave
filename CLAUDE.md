@@ -97,10 +97,31 @@ If you "fix" a dependency warning by upgrading one of these, the whole repo stop
 Run tests with:
 
 ```bash
-.venv/Scripts/python.exe -m pytest tests -q
+.venv/Scripts/python.exe -m pytest -m fast
 ```
 
-The full suite takes about 5 minutes because parts of it drive real `ntopcl` subprocesses.
+**Use the tiers.** They are applied by module in `tests/conftest.py`, and measured:
+
+| tier | tests | wall clock | needs |
+|---|---|---|---|
+| `fast` | 297 | about 11 s | SUAVE only |
+| `medium` | 267 | about 85 s | SUAVE only |
+| `slow` | 126 | about 11 min | SUAVE, a licensed `ntopcl`, the nTop block universe |
+
+`-m fast` is the inner loop. `-m "fast or medium"` is everything CI can run. `-m slow` is the nTop
+subprocess tests, which is where the 11 minutes lives.
+
+Two things to know before you touch the tiering:
+
+- **A new test module must be added to `TIERS`** in `tests/conftest.py`, or it is excluded from
+  every fast and medium run and CI goes green without executing it. `tests/test_tiers.py` fails if
+  you forget.
+- **A typo in `-m` used to exit 0** having deselected everything, which in CI is
+  indistinguishable from success. `conftest` now rejects an unknown marker and fails a tier that
+  selects zero tests. `--strict-markers` does NOT do this; it only checks markers used in code.
+
+CI is `.github/workflows/ci.yml`. It runs fast then medium on Ubuntu, and states in the run summary
+that the geometry path was not exercised, because the slow tier cannot run on a hosted runner.
 
 ---
 
