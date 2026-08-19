@@ -44,7 +44,7 @@ lives:
 | Driver | `run_sv1.py` | `scripts/iv1_converge.py` |
 
 **IV-1 is built as PARALLEL modules, not as changes to the SV-1 ones.** That is deliberate. SV-1 is
-the regression baseline: its 296 tests are the contract that says the shared physics still works.
+the regression baseline: its tests are the contract that says the shared physics still works.
 When you add a third vehicle, do the same. Share code by importing or by lifting a function to
 module level in the original, never by editing the original's behaviour.
 

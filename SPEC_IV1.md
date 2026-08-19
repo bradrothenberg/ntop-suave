@@ -183,7 +183,7 @@ Minimise launch mass subject to A2 through A12, plus:
 | `ntopgen/` | a two-body notebook with an interstage and strakes |
 
 Everything already in the repo for SV-1 must keep working unchanged. SV-1 is the regression
-baseline: its 296 tests must still pass.
+baseline: its tests must still pass.
 
 ## 8. Fidelity, additional to `SPEC.md` section 5
 

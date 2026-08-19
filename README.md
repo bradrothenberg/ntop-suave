@@ -25,8 +25,8 @@ notebook input, so one notebook serves every design point: convert once, run man
 
 **The coupling changes the answer.** On the reference example, feeding nTop's measured geometry back
 moved launch mass from 545.1 kg to 554.3 kg and range from 191.6 km to 189.5 km. nTop measured the
-enclosed volume to within 0.013 percent of closed form and the cross-section area distribution to
-within 0.16 percent at the worst station.
+enclosed volume to within 0.019 percent of closed form and the body wetted area to within 0.117
+percent.
 
 **The loop finds contradictions that inspection misses.** On the reference example it found that two
 requirements were mutually exclusive, and that a third was physically impossible for the vehicle
@@ -142,7 +142,7 @@ locally for that.
 
 ## Verification
 
-296 tests. The physics is checked against closed form where it exists and against published
+690 tests. The physics is checked against closed form where it exists and against published
 measurements where it does not.
 
 | Check | Result |

@@ -516,12 +516,14 @@ What nTop built and measured.
 | `sv1.stl` | Surface mesh. GitHub renders this in the browser. |
 | `sv1.step` | CAD interchange, for import into anything else. |
 | `sv1.implicit` | nTop implicit body, for field queries through nTop Core. |
-| `sv1_measurements.json`, `measurements_flat.csv` | Everything nTop measured. |
-| `area_distribution.csv` | Cross-section area against station, 16 stations, used for wave drag. |
+| `sv1_measurements.json` | Everything nTop measured. |
 
-nTop measured the enclosed volume to within 0.013 percent of independent closed-form geometry, the
-body wetted area to within 0.224 percent, and the area distribution to within 0.16 percent at the
-worst station.
+nTop measured the enclosed volume to **-0.0184 percent** of independent closed-form geometry, and
+the body wetted area to +0.1165 percent. See `05_validation/evidence.json`, section `ntop`.
+
+This run measured no area distribution. The notebook ran with `area_stations = 0`, so nTop returned
+none and the aero model used its closed-form cross-section fallback. `01_design/point_ntop.json`
+records that as a warning.
 
 ### 03_trade_study
 | File | What it is |
