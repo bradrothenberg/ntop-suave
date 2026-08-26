@@ -76,10 +76,16 @@ That model is validated against two exact closed forms, neither of which is a cu
 
 | check | achieved |
 |---|---|
-| Sears-Haack body, `D/q = 128 V^2 / (pi L^4)` | machine precision |
-| Von Karman ogive, `C_D = (d/L)^2` on base area | 2.1e-5 |
+| Sears-Haack body, `D/q = 128 V^2 / (pi L^4)` | 4.5e-5 |
+| Von Karman ogive, `C_D = (d/L)^2` on base area | 1.3e-5 |
+| Optimum Glauert shape factor against `4/pi` | 6.8e-5 |
 | Glauert series against direct double integration | converges onto it |
 | Von Karman ogive IS the constrained optimum | asserted, not assumed |
+
+Every residual above is measured on the 4001-station check table recorded in `04_validation/`.
+The Sears-Haack residual belongs to the CHECK TABLE and not to the model: that profile has
+infinite slope at both ends, so a central-difference derivative converges slowly on it, and
+refining 501 to 8001 stations drives the error from 1.7e-2 to 1.7e-5.
 
 The tangent ogive carries 1.17 times the minimum-possible wave drag at every fineness in the
 design range. A 9-control-point spline recovers 86 percent of that gap.
@@ -110,7 +116,7 @@ The measured stage-2 volume agrees with an independent analytic integral of the 
 
 | file | what it is |
 |---|---|
-| `IV1_spline_engineering_report.pdf` | the write-up: 20 pages, 4 figures. Read this first. |
+| `IV1_spline_engineering_report.pdf` | the write-up: 21 pages, 6 figures. Read this first. |
 | `ogive_vs_spline.csv` | the comparison table above, machine readable |
 | `01_design/converged.json` | the full converged spline design: design vector, constraints, mass statement, intercept state |
 | `01_design/constraints.csv` | all 15 requirements with value, limit and pass/fail |
@@ -119,7 +125,7 @@ The measured stage-2 volume agrees with an independent analytic integral of the 
 | `02_geometry/iv1_measurements.json` | the raw measurement set |
 | `03_ogive_baseline/` | the tangent-ogive result, same code, same day |
 | `04_validation/` | `validation_summary.csv` and the machine-readable `evidence.json` behind it |
-| `figures/` | the four report figures as PNG |
+| `figures/` | the six report figures as PNG, including the two vehicle renders |
 
 ## Reproducing
 
@@ -139,11 +145,3 @@ The measured stage-2 volume agrees with an independent analytic integral of the 
   percent lower, and that penalty is not applied.
 - No DOE was run for IV-1. The comparison is two converged points and a four-point pitchover
   sweep, not a trade study.
-- **No render of the vehicle.** Neither IV-1 run enabled mesh export, so there is no STL under
-  `runs/IV-1_spline/geom` to render from. Section 9 of the report says so rather than quietly
-  omitting the figure.
-- The wave-drag residuals quoted in the report are measured on a 4001-station check table and
-  are recorded in `04_validation/`. They are NOT "machine precision": Sears-Haack comes out at
-  4.5e-5 and von Karman at 1.3e-5. The residual belongs to the check table rather than the
-  model, because the Sears-Haack profile has infinite end slopes that a central difference
-  resolves slowly; refining 501 to 8001 stations drives it from 1.7e-2 to 1.7e-5.

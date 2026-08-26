@@ -270,7 +270,26 @@ def what_changed(story: list, D: dict) -> None:
         )
     )
     add_figure(
-        story, "iv1_spline_oml.png", 1,
+        story, "iv1_spline_side.png", 1,
+        "The converged IV-1, rendered from the STL that nTop exported at this design point. "
+        "Nose tip at the left. The splined payload-stage nose runs back to the strakes, the "
+        "four stage-2 tail fins sit at the interstage joint, and the SPLINED INTERSTAGE FLARE "
+        "is the smooth expansion aft of them, where the tangent-ogive configuration carries a "
+        "straight conical shoulder. The booster and its four tail fins complete the stack. "
+        "Overall length 5.08 m.",
+        "Re-run scripts/render_iv1_spline.py, which needs the measurement made with "
+        "export_stl=True.",
+        max_h_in=1.9,
+    )
+    add_figure(
+        story, "iv1_spline_iso.png", 2,
+        "The same vehicle from an oblique view, which shows the four strakes and the two "
+        "cruciform fin sets as separate bodies rather than as an outline.",
+        "Re-run scripts/render_iv1_spline.py.",
+        max_h_in=3.0,
+    )
+    add_figure(
+        story, "iv1_spline_oml.png", 3,
         "The revolved spline. Panel (a) is the stage-2 nose and the nine control points the "
         "notebook computes. Panel (b) is the closed-form validation of the wave-drag model. "
         "Panel (c) is the zero-lift drag it moves, in both flight configurations.",
@@ -533,7 +552,7 @@ def the_result(story: list, D: dict) -> None:
         )
     )
     add_figure(
-        story, "iv1_spline_margins.png", 2,
+        story, "iv1_spline_margins.png", 4,
         "The same margins, drawn. Orange ticks are the tangent-ogive baseline at the same "
         "pitchover angle. The two shapes trade margin between A3 and A11.",
         "Run -m rocketgen.report.fig_iv1_spline.",
@@ -552,7 +571,7 @@ def the_result(story: list, D: dict) -> None:
         )
     )
     add_figure(
-        story, "iv1_spline_ascent.png", 3,
+        story, "iv1_spline_ascent.png", 5,
         "The two flown missions. Both reach the same 100 mile slant range, because that is what "
         "the trajectory is flown to. The spline arrives higher, faster and in thinner air.",
         "Run -m rocketgen.report.fig_iv1_spline.",
@@ -684,7 +703,7 @@ def the_trade(story: list, D: dict) -> None:
         )
     )
     add_figure(
-        story, "iv1_spline_pitchover.png", 4,
+        story, "iv1_spline_pitchover.png", 6,
         "The pitchover sweep. Panel (a) shows the spline clearing A3 two degrees earlier. Panel "
         "(b) shows what that costs in aerodynamic g. Panel (d) shows how A11 is actually met at "
         "the converged point.",
@@ -912,10 +931,13 @@ def reproduce(story: list, D: dict) -> None:
     )
     story.append(
         Paragraph(
-            "One figure that this report does not have. There is no render of the IV-1 spline "
-            "vehicle. The two IV-1 runs did not turn on the mesh export, so no STL exists under "
-            "runs/IV-1_spline/geom. A render would need the study to be re-run with exports "
-            "enabled, which this report deliberately did not do.",
+            "A note on the renders in Figures 1 and 2. The first version of this report had no "
+            "picture of the vehicle at all, because neither IV-1 run turned on the mesh export "
+            "and no STL existed to render from. That is not recoverable after the fact: it "
+            "needs the measurement repeating with exports enabled, which "
+            "scripts/render_iv1_spline.py now does at the converged point only. A report "
+            "without a view of its own geometry cannot be checked by a reader, so this is now "
+            "a standing rule of the repository rather than a per-report decision.",
             S.BODY,
         )
     )

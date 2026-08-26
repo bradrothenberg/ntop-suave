@@ -261,6 +261,12 @@ touching `ntopgen/`. The headline traps:
    five.** Meshing is not what makes a measurement slow. Build primitives as primitives, and if you
    need a measurement cheaper, simplify the field or drop the measurement, not the mesh tolerance.
 
+   The corollary is sharp. Replacing IV-1's `cone` interstage primitive with a revolved 24-segment
+   chord POLYGON took the stack measurement from 127 s to **1341 s**. Replacing the same primitive
+   with a revolved SPLINE took it to 143 s. The polygon is not slow because it is a revolve; it is
+   slow because 24 chords make a field with 24 creases in it. Field complexity is the cost, and a
+   smooth primitive is cheaper than a faceted approximation of the same shape.
+
 9. **A plate's real wetted area is not `n * height * length`.** The idealised formula ignores the tip
    face, the two edge faces and the cylindrical root patch the boolean leaves behind. For an 8 mm
    plate 30 mm tall that is 27 percent of the total, so measured area came out at 1.2656 times
@@ -283,11 +289,66 @@ touching `ntopgen/`. The headline traps:
     its centre of gravity 1.2 mm off axis. That is discretisation. Test against a tolerance, never
     against zero.
 
+13. **A `raw_block` return type must be nTop's REAL type name, not the one you would expect.**
+    `profile_from_curves` returns `new_profile`, not `profile`, and there is no props bridge from
+    it to `implicit_2d`, so it needs the `new_profile` revolve overload. The spline blocks return
+    `spline`, and their list is `core.list<curve_interface>`, not `curve`. Every one of those is a
+    bare `Error loading recipe` if you get it wrong, with no hint which. Read the type off an
+    `exportjson`, do not infer it from the display name.
+
+14. **Literal encodings that bite:** an integer argument is `{"type": "integer", "value": {"val": 3}}`,
+    which is what `literal_integer` emits; a direction vector is DIMENSIONLESS (`"units": {}`) and
+    passing it as a length is rejected; and a notebook with **no inputs at all** cannot be run with
+    `-j`, which fails as `JSON file has no inputs` rather than as anything about inputs being
+    optional.
+
+15. **Build a closed profile as a curve LIST, not as one curve through every point.** The SV-1
+    outer mould line is a splined nose, a straight cylinder, a boattail and a flat base. One spline
+    through all of those rounds off the shoulder, the boattail corner and the base rim. Mixing
+    `spline_by_control_points` with `two_point_line<point,point>` segments in the same
+    `list<curve_interface>` keeps every corner exact and every straight run straight.
+
+16. **A `.ntop` is a binary that bakes absolute export paths into itself.** Section 11 says to
+    regenerate rather than copy, and this is why: no text scrub will ever find them. It also stores
+    some literals as UTF-16, so a byte search for ASCII walks straight past. Any check that a
+    published artefact is free of developer paths must read EVERY file as bytes, in both encodings.
+    A check that only looks at `.json` and `.csv` skips the one file most likely to carry one.
+
+    Choose the needles carefully. Drive-letter patterns like `D:/` fire constantly on packed float
+    data: `Y@L:/>Q` and `6@c:/>` are real hits from a real `.ntop`. Search for machine-identifying
+    tokens, which cannot occur by chance.
+
 When `ntopcl` rejects your JSON, do not guess. Dissect a real notebook:
 
 ```bash
 ntopcl exportjson some_real_notebook.ntop out.json --ext --dev-blocks-on=True
 ```
+
+### 4.1 Parameterising a shape so one notebook serves every design point
+
+The whole convert-once-run-many economy depends on the shape being an INPUT, not a topology. Two
+patterns make that work, and the second is not obvious.
+
+**Emit the control points, let nTop do the geometry.** Control point `i` of a splined run is
+`(x0 + L * f_i, r0 + (R - r0) * c_i)`: two multiplies of live notebook inputs. `L`, `R` and every
+`c_i` stay inputs, so a shape sweep reuses one converted `.ntop`. The topology key must therefore
+exclude the control VALUES and include their COUNT, and
+`tests/test_spline_notebook.py::test_blend_does_not_change_the_topology_key` asserts exactly that,
+on the key itself rather than by timing a convert, so it cannot pass on a warm cache.
+
+**Put the control points at the GREVILLE ABSCISSAE of the knot vector.** They are the unique
+values for which a B-spline reproduces its own parameter, `sum_i N_i(u) g_i = u`, so with them the
+axial coordinate is `x(u) = L * u` exactly (verified to 2.2e-16) and the radius is a spline in the
+axial STATION rather than in an arbitrary parameter. With evenly spaced fractions instead, the fit
+to a tangent ogive degrades from 1.0e-6 to 2.7e-3 of R and the enclosed volume moves 0.096 percent
+instead of 1.7e-7. Measured both ways. `oml_spline.station_fractions` is the one place this lives.
+
+**A smooth primitive beats a sampled one on every axis at once.** The splined SV-1 notebook is 317
+recipe body nodes against 405 for the ogive one, measures in 23 to 32 s against 57 s, and carries
+NO discretisation error at all, because nTop revolves the curve rather than a chord polygon. There
+was no accuracy-for-speed trade to make here. That is worth remembering before reaching for a
+faceted approximation: check whether the exact primitive exists first, and see section 4 point 6
+about what "it is not in `functions.json`" is worth as evidence.
 
 ---
 
@@ -464,6 +525,33 @@ section 6 was found.
 An RK4 order check needs a case whose exact solution is NOT a low-order polynomial. A drag-free
 vertical climb has constant acceleration, so RK4 integrates it exactly and the order ratio is
 meaningless. Use the 45 degree vacuum parabola, where the `gamma_dot` term is active.
+
+---
+
+## 10.1 Every report ships with renderings of the geometry
+
+**STANDING RULE. A report without a picture of the thing it is about is not finished.**
+
+Any engineering report produced from this repo must carry rendered views of the geometry it
+describes, and those renders must be exported into the curated example next to the report, not
+left in `runs/`. A reader who cannot see the vehicle cannot check that the numbers describe the
+vehicle they think they do.
+
+Concretely, before you call a report done:
+
+- the measurement run that feeds it must be made with `export_stl=True`, so there is something to
+  render from. This is the step that gets forgotten: the IV-1 spline report shipped its first
+  version with no vehicle render at all, because neither IV-1 run had enabled mesh export and by
+  then the runs had finished;
+- render at least an isometric and a side view, and for a multi-body vehicle a view that shows the
+  bodies distinguishable from each other;
+- put the PNGs in the example's figures directory as well as embedding them in the PDF, so they
+  can be looked at without opening the report;
+- if a render genuinely cannot be produced, say so IN THE REPORT and say why, per section 3.3.
+
+Exports cost minutes and are off by default in `measure_rocket` and `measure_stack` for good
+reason (see the docstrings). Turn them on for the CONVERGED point only. That is what
+`run_sv1.py --stage converged` does, and it is why that stage exists.
 
 ---
 
