@@ -180,7 +180,7 @@
 
     <div class="diagram-shell">
       <div class="diagram-inner">
-      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram for a Group 3 UAS: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures an implicit lofted outer mould line and airframe, and modules for masses, lifting-line aerodynamics, a heavy-fuel engine and propeller, and a climb-cruise-loiter mission compute performance; constraint residuals feed a pattern search. The converged geometry escalates to a viscous RANS solve on GCP A100 GPUs.">
+      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram for a Group 3 UAS: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures a lofted outer mould line and airframe built as a signed distance field, and modules for masses, lifting-line aerodynamics, a heavy-fuel engine and propeller, and a climb-cruise-loiter mission compute performance; constraint residuals feed a pattern search. The converged geometry escalates to a viscous RANS solve on GCP A100 GPUs.">
         <defs>
           <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0.6 L7.4,4 L0,7.4 Z" class="arrow"/>
@@ -266,10 +266,10 @@
           <rect class="body" x="264" y="140" width="328" height="160" rx="2"/>
           <text class="mn" x="282" y="166" style="letter-spacing:.14em">CONVERT ONCE · RUN MANY</text>
           <text class="ttl" x="282" y="198" style="font-size:19px">nTop notebook</text>
-          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">implicit lofted OML + airframe</text>
-          <text class="sm" x="282" y="248">chord and twist splined along the span</text>
-          <rect class="chip" x="282" y="260" width="196" height="22" rx="2"/>
-          <text class="chip-t" x="292" y="275">wing · boom · tail · nacelle</text>
+          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">lofted OML + Airframe</text>
+          <text class="sm" x="282" y="248">SDF construction</text>
+          <rect class="chip" x="282" y="260" width="302" height="22" rx="2"/>
+          <text class="chip-t" x="288" y="275">fuselage | wing | tail | control surfaces | systems</text>
         </g>
 
         <g class="node" data-node="masses">
@@ -373,8 +373,8 @@
       <div class="card">
         <div class="step"><span>STAGE A — GEOMETRY</span><span class="time">notional</span></div>
         <h3>nTop</h3>
-        <div class="role">Implicit lofted OML · measured, not estimated</div>
-        <p>The airframe is one <b>implicit body</b>, lofted through splined sections: chord and twist along the span, closed against fuselage, boom and tail. Booleans and offsets are exact on the field rather than on a tessellation, so the notebook reports wetted area per component, tank volume, CG, inertia and the spanwise <span style="font-family:var(--mono);font-size:12px">c(y)</span> the aero model needs.</p>
+        <div class="role">Lofted OML + airframe · measured, not estimated</div>
+        <p>The airframe is built as a <b>signed distance field</b> — fuselage, wing, tail, control surfaces and systems combined as one implicit body. Booleans, offsets and fillets are exact on the field rather than on a tessellation, so the notebook reports wetted area per component, tank volume, CG, inertia and the spanwise <span style="font-family:var(--mono);font-size:12px">c(y)</span> the aero model needs.</p>
         <div class="out">
           <em>→</em> wetted area by component &nbsp;·&nbsp; tank volume<br>
           <em>→</em> c(y), twist(y) &nbsp;·&nbsp; CG &amp; inertia
