@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>G3-1 Endurance UAS — Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F0D;
+    --panel-solid:#101613;
+    --ink:#E9EEEB;
+    --muted:#8FA098;
+    --hair:rgba(150,170,160,.16);
+    --hair-strong:rgba(150,170,160,.30);
+    --green:#76B900;
+    --green-dim:rgba(118,185,0,.14);
+    --steel:#6FA8C9;
+    --steel-dim:rgba(111,168,201,.12);
+    --amber:#D9A441;
+    --amber-dim:rgba(217,164,65,.13);
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --disp:'Space Grotesk',var(--sans);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--green);color:#081100}
+  .frame{max-width:1280px;margin:0 auto;padding:0 28px}
+
+  header{border-bottom:1px solid var(--hair-strong)}
+  .tblock{display:grid;grid-template-columns:1fr auto;gap:32px;padding:44px 0 36px;align-items:end}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--amber);text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+  .eyebrow::after{content:"";height:1px;width:64px;background:var(--amber);opacity:.5}
+  h1{font-family:var(--disp);font-weight:600;font-size:clamp(34px,4.6vw,58px);letter-spacing:-.015em;line-height:1.02}
+  h1 .thin{font-weight:400;color:var(--muted)}
+  .sub{margin-top:16px;max-width:680px;color:var(--muted);font-size:16.5px}
+  .sub b{color:var(--ink);font-weight:500}
+  .meta{font-family:var(--mono);font-size:11.5px;border:1px solid var(--hair-strong);min-width:274px}
+  .meta div{display:flex;justify-content:space-between;gap:24px;padding:8px 14px;border-bottom:1px solid var(--hair)}
+  .meta div:last-child{border-bottom:none}
+  .meta span:first-child{color:var(--muted);letter-spacing:.08em}
+  .meta span:last-child{color:var(--ink)}
+  .meta .grn{color:var(--green) !important}
+  .meta .amb{color:var(--amber) !important}
+
+  section{padding:56px 0 8px}
+  .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:26px}
+  .sec-head h2{font-family:var(--disp);font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .sec-head .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+  .sec-head::after{content:"";flex:1;height:1px;background:var(--hair)}
+
+  .diagram-shell{
+    border:1px solid var(--hair-strong);
+    background:linear-gradient(rgba(150,170,160,.035) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(150,170,160,.035) 1px, transparent 1px);
+    background-size:28px 28px;overflow-x:auto;
+  }
+  .diagram-inner{min-width:1080px}
+  svg{display:block;width:100%;height:auto}
+  svg text{font-family:var(--sans)}
+  .zone-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;fill:var(--muted)}
+  .zone-box{fill:none;stroke:var(--hair);stroke-dasharray:5 5}
+  .node rect.body{fill:var(--panel-solid);stroke:var(--hair-strong);transition:all .25s ease}
+  .node .ttl{font-family:var(--disp);font-size:15px;font-weight:600;fill:var(--ink)}
+  .node .sm{font-size:11.5px;fill:var(--muted)}
+  .node .mn{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+  .node .mn.grn{fill:var(--green)}
+  .node .mn.stl{fill:var(--steel)}
+  .node .mn.amb{fill:var(--amber)}
+  .chip{fill:var(--green-dim);stroke:rgba(118,185,0,.4)}
+  .chip-t{font-family:var(--mono);font-size:9.5px;fill:var(--green)}
+  .chip.blue{fill:var(--steel-dim);stroke:rgba(111,168,201,.4)}
+  .chip-t.blue{fill:var(--steel)}
+  .chip.amb{fill:var(--amber-dim);stroke:rgba(217,164,65,.45)}
+  .chip-t.amb{fill:var(--amber)}
+  .core rect.body{stroke:var(--green);stroke-width:1.4;filter:drop-shadow(0 0 14px rgba(118,185,0,.16))}
+  .gpu rect.body{stroke:rgba(118,185,0,.65)}
+  .cloud rect.body{stroke:rgba(111,168,201,.55)}
+  .pending rect.body{stroke:rgba(217,164,65,.6);stroke-dasharray:6 4}
+  .edge{stroke:var(--hair-strong);fill:none;stroke-width:1.2}
+  .edge.grn{stroke:rgba(118,185,0,.55)}
+  .edge.stl{stroke:rgba(111,168,201,.5)}
+  .edge.amb{stroke:rgba(217,164,65,.5)}
+  .flow{fill:none;stroke-width:1.6;stroke-dasharray:3 9;stroke-linecap:round}
+  .flow.g{stroke:var(--green)} .flow.b{stroke:var(--steel)} .flow.a{stroke:var(--amber)}
+  @media (prefers-reduced-motion: no-preference){.flow{animation:dash 2.6s linear infinite}}
+  @keyframes dash{to{stroke-dashoffset:-48}}
+  .edge-label{font-family:var(--mono);font-size:9.8px;fill:var(--muted)}
+  .edge-label.g{fill:var(--green)} .edge-label.b{fill:var(--steel)} .edge-label.a{fill:var(--amber)}
+  .arrow{fill:var(--hair-strong)}
+  .diagram.dimmed .node,.diagram.dimmed .edgegrp{opacity:.22;transition:opacity .2s}
+  .diagram.dimmed .node.lit,.diagram.dimmed .edgegrp.lit{opacity:1}
+  .node{cursor:default}
+
+  .legend{display:flex;gap:28px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.06em}
+  .legend i{display:inline-block;width:22px;height:0;border-top:2px solid;margin-right:8px;vertical-align:middle}
+  .legend .lg-g i{border-color:var(--green)}
+  .legend .lg-b i{border-color:var(--steel)}
+  .legend .lg-a i{border-color:var(--amber);border-top-style:dashed}
+  .legend .lg-h i{border-color:var(--hair-strong)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair-strong)}
+  .card{background:var(--bg);padding:26px 24px 24px;position:relative}
+  .card .step{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.2em;margin-bottom:14px;display:flex;justify-content:space-between;gap:10px}
+  .card .step .time{color:var(--green)}
+  .card h3{font-family:var(--disp);font-size:19px;font-weight:600;margin-bottom:4px}
+  .card .role{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+  .card p{font-size:13.5px;color:var(--muted);margin-bottom:16px}
+  .card p b{color:var(--ink);font-weight:500}
+  .out{font-family:var(--mono);font-size:10.5px;line-height:2;color:var(--muted)}
+  .out em{font-style:normal;color:var(--green)}
+  .card.cfd .step .time,.card.cfd .out em{color:var(--steel)}
+  .card.pend .step .time,.card.pend .out em{color:var(--amber)}
+  .card .status{display:inline-block;margin-top:14px;padding:3px 10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;border:1px solid rgba(217,164,65,.5);color:var(--amber);background:var(--amber-dim)}
+  .cards.two{grid-template-columns:repeat(2,1fr)}
+
+  .sec-intro{color:var(--muted);font-size:14.5px;max-width:840px;margin:-8px 0 24px}
+  .sec-intro b{color:var(--ink);font-weight:500}
+  .sec-intro .mn{font-family:var(--mono);font-size:12px}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tbl th{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:400;padding:10px 14px;border-bottom:1px solid var(--hair-strong)}
+  .tbl td{padding:10px 14px;border-bottom:1px solid var(--hair);color:var(--muted)}
+  .tbl td:first-child{color:var(--ink)}
+  .tbl td.num{font-family:var(--mono);font-size:11.5px;color:var(--green);white-space:nowrap}
+  .tbl td.tbd{font-family:var(--mono);font-size:11.5px;color:var(--amber);white-space:nowrap}
+  .tbl td.mn{font-family:var(--mono);font-size:11.5px}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl-wrap{border:1px solid var(--hair-strong);overflow-x:auto}
+
+  .contract{margin-top:22px;border:1px solid rgba(217,164,65,.5);background:var(--amber-dim);padding:14px 20px;font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--ink)}
+  .contract b{color:var(--amber);font-weight:500}
+  .agent-note{padding:12px 18px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.05em}
+  .agent-note b{color:var(--green);font-weight:500}
+
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:0 48px;counter-reset:st}
+  .steps li{list-style:none;counter-increment:st;display:grid;grid-template-columns:44px 1fr;gap:16px;padding:16px 0;border-bottom:1px solid var(--hair);font-size:14px;color:var(--muted)}
+  .steps li::before{content:counter(st,decimal-leading-zero);font-family:var(--mono);font-size:13px;color:var(--green);padding-top:1px}
+  .steps li b{color:var(--ink);font-weight:500}
+  .steps li .mn{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  footer{margin-top:72px;border-top:1px solid var(--hair-strong);padding:22px 0 40px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.08em}
+  footer .amb{color:var(--amber)}
+
+  @media (max-width:900px){
+    .cards,.cards.two{grid-template-columns:1fr}
+    .steps{grid-template-columns:1fr}
+    .tblock{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="frame tblock">
+    <div>
+      <div class="eyebrow">Workflow · mockup · SHT 1 of 1</div>
+      <h1>G3-1 Endurance UAS<br><span class="thin">the same ladder, a different physics</span></h1>
+      <p class="sub">A Group 3 ISR aircraft: <b>heavy-fuel piston engine and a propeller</b>, no solid motor, no staging, no supersonic flight. The loop is unchanged — nTop measures the geometry, the sizing code flies it — but every physics module underneath it is replaced, because <b>endurance</b> is the driver and <b>induced drag</b> is the enemy.</p>
+    </div>
+    <div class="meta" aria-label="drawing title block">
+      <div><span>PROGRAM</span><span>G3-1 · Group 3 UAS</span></div>
+      <div><span>CLASS</span><span>&lt;599 kg · &lt;18 kft · &lt;250 kt</span></div>
+      <div><span>PROPULSION</span><span class="grn">heavy-fuel + prop</span></div>
+      <div><span>VALIDATION</span><span class="amb">FUN3D RANS · transition</span></div>
+      <div><span>STATUS</span><span class="amb">MOCKUP · NOT RUN</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="frame">
+
+  <!-- =============== DIAGRAM =============== -->
+  <section>
+    <div class="sec-head"><h2>System schematic</h2><span class="tag">same loop · every module replaced</span></div>
+
+    <div class="diagram-shell">
+      <div class="diagram-inner">
+      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram for a Group 3 UAS: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures an implicit lofted outer mould line and airframe, and modules for masses, lifting-line aerodynamics, a heavy-fuel engine and propeller, and a climb-cruise-loiter mission compute performance; constraint residuals feed a pattern search. The converged geometry escalates to a viscous RANS solve on GCP A100 GPUs.">
+        <defs>
+          <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0.6 L7.4,4 L0,7.4 Z" class="arrow"/>
+          </marker>
+        </defs>
+
+        <rect class="zone-box" x="24" y="86" width="200" height="576"/>
+        <text class="zone-label" x="36" y="112">DESIGN INTENT</text>
+        <rect class="zone-box" x="240" y="86" width="576" height="576"/>
+        <text class="zone-label" x="252" y="112">COUPLED FIXED POINT · LOCAL</text>
+        <rect class="zone-box" x="832" y="86" width="384" height="576"/>
+        <text class="zone-label" x="844" y="112">HIGH-FIDELITY VALIDATION · GCP</text>
+
+        <!-- edges -->
+        <g class="edgegrp" data-link="reqs dv">
+          <path class="edge" d="M124,232 L124,296" marker-end="url(#arr)"/>
+          <path class="flow g" d="M124,232 L124,296"/>
+          <text class="edge-label" x="134" y="268">bounds</text>
+        </g>
+        <g class="edgegrp" data-link="dv ntop">
+          <path class="edge" d="M204,336 L236,336 L236,222 L264,222" marker-end="url(#arr)"/>
+          <path class="flow g" d="M204,336 L236,336 L236,222 L264,222"/>
+          <text class="edge-label" x="212" y="318" transform="rotate(-90 212,318)">notebook inputs</text>
+        </g>
+        <g class="edgegrp" data-link="ntop masses aero prop miss">
+          <path class="edge" d="M428,300 L428,326"/>
+          <path class="edge" d="M315,326 L741,326"/>
+          <path class="edge" d="M315,326 L315,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M457,326 L457,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M599,326 L599,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M741,326 L741,352" marker-end="url(#arr)"/>
+          <path class="flow g" d="M428,300 L428,326"/>
+          <text class="edge-label g" x="440" y="320">wetted area · tank volume · CG · c(y), twist</text>
+        </g>
+        <g class="edgegrp" data-link="masses aero prop miss cons">
+          <path class="edge" d="M315,452 L315,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M457,452 L457,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M599,452 L599,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M741,452 L741,556" marker-end="url(#arr)"/>
+          <text class="edge-label" x="620" y="520">fuel burn · endurance</text>
+        </g>
+        <g class="edgegrp" data-link="cons dv">
+          <path class="edge grn" d="M252,592 L124,592 L124,376" marker-end="url(#arr)"/>
+          <path class="flow g" d="M252,592 L124,592 L124,376"/>
+          <text class="edge-label g" x="132" y="470" transform="rotate(-90 132,470)">residuals → new design vector</text>
+        </g>
+        <g class="edgegrp" data-link="ntop surf">
+          <path class="edge stl" d="M592,180 L868,180" marker-end="url(#arr)"/>
+          <path class="flow b" d="M592,180 L868,180"/>
+          <text class="edge-label b" x="672" y="172">converged airframe · watertight</text>
+        </g>
+        <g class="edgegrp" data-link="surf mesh">
+          <path class="edge stl" d="M1022,212 L1022,252" marker-end="url(#arr)"/>
+          <path class="flow b" d="M1022,212 L1022,252"/>
+          <text class="edge-label b" x="1032" y="238">surface + BL prisms</text>
+        </g>
+        <g class="edgegrp" data-link="mesh fun3d">
+          <path class="edge amb" d="M1022,380 L1022,440" marker-end="url(#arr)"/>
+          <path class="flow a" d="M1022,380 L1022,440"/>
+          <text class="edge-label a" x="1032" y="416">GCS · b8.ugrid</text>
+        </g>
+        <g class="edgegrp" data-link="fun3d aero">
+          <path class="edge amb" d="M868,596 L824,596 L824,640 L457,640 L457,452" marker-end="url(#arr)"/>
+          <path class="flow a" d="M868,596 L824,596 L824,640 L457,640 L457,452"/>
+          <text class="edge-label a" x="560" y="634">span efficiency · separation · transition</text>
+        </g>
+
+        <!-- nodes -->
+        <g class="node" data-node="reqs">
+          <rect class="body" x="44" y="140" width="160" height="92" rx="2"/>
+          <text class="ttl" x="60" y="168">Requirements</text>
+          <text class="sm" x="60" y="188">endurance · payload</text>
+          <text class="mn" x="60" y="212">G1–G11</text>
+        </g>
+        <g class="node" data-node="dv">
+          <rect class="body" x="44" y="296" width="160" height="80" rx="2"/>
+          <text class="ttl" x="60" y="324" style="font-size:14px">Design vector</text>
+          <text class="mn" x="60" y="344">span · AR · load_blend</text>
+          <text class="sm" x="60" y="362">plus fuel and power</text>
+        </g>
+
+        <g class="node core" data-node="ntop">
+          <rect class="body" x="264" y="140" width="328" height="160" rx="2"/>
+          <text class="mn" x="282" y="166" style="letter-spacing:.14em">CONVERT ONCE · RUN MANY</text>
+          <text class="ttl" x="282" y="198" style="font-size:19px">nTop notebook</text>
+          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">implicit lofted OML + airframe</text>
+          <text class="sm" x="282" y="248">chord and twist splined along the span</text>
+          <rect class="chip" x="282" y="260" width="196" height="22" rx="2"/>
+          <text class="chip-t" x="292" y="275">wing · boom · tail · nacelle</text>
+        </g>
+
+        <g class="node" data-node="masses">
+          <rect class="body" x="252" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="266" y="376">01</text>
+          <text class="ttl" x="266" y="398" style="font-size:14px">masses</text>
+          <text class="sm" x="266" y="418">group weights</text>
+          <text class="mn" x="266" y="438">empty · fuel · pl</text>
+        </g>
+        <g class="node" data-node="aero">
+          <rect class="body" x="394" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="408" y="376">02</text>
+          <text class="ttl" x="408" y="398" style="font-size:14px">aero</text>
+          <text class="sm" x="408" y="418">lifting line</text>
+          <text class="mn" x="408" y="438">induced + para</text>
+        </g>
+        <g class="node" data-node="prop">
+          <rect class="body" x="536" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="550" y="376">03</text>
+          <text class="ttl" x="550" y="398" style="font-size:14px">powerplant</text>
+          <text class="sm" x="550" y="418">HFE + propeller</text>
+          <text class="mn" x="550" y="438">BSFC · eta_prop</text>
+        </g>
+        <g class="node" data-node="miss">
+          <rect class="body" x="678" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="692" y="376">04</text>
+          <text class="ttl" x="692" y="398" style="font-size:14px">mission</text>
+          <text class="sm" x="692" y="418">climb · loiter</text>
+          <text class="mn" x="692" y="438">energy integral</text>
+        </g>
+
+        <g class="node" data-node="cons">
+          <rect class="body" x="252" y="556" width="552" height="72" rx="2"/>
+          <text class="ttl" x="270" y="584" style="font-size:14px">converge_point → constraints → pattern search</text>
+          <text class="mn" x="270" y="608">endurance · MTOW · stall · ceiling · tank volume closes · static margin</text>
+        </g>
+
+        <g class="node cloud" data-node="surf">
+          <rect class="body" x="868" y="140" width="308" height="72" rx="2"/>
+          <text class="ttl" x="886" y="168" style="font-size:15px">Airframe surface</text>
+          <text class="sm" x="886" y="188">wing · tail · boom · nacelle</text>
+          <text class="mn stl" x="1112" y="168">STL</text>
+        </g>
+        <g class="node gpu" data-node="mesh">
+          <rect class="body" x="868" y="252" width="308" height="128" rx="2"/>
+          <text class="ttl" x="886" y="280" style="font-size:15px">AFLR3 volume mesh</text>
+          <text class="mn grn" x="1088" y="280">VISCOUS</text>
+          <text class="mn" x="886" y="302">boundary-layer prisms required</text>
+          <rect class="chip" x="886" y="316" width="272" height="22" rx="2"/>
+          <text class="chip-t" x="896" y="331">y+ ~ 1 · 40 layers · trailing-edge resolution</text>
+          <text class="sm" x="886" y="362">a wing without a boundary layer has no drag</text>
+        </g>
+        <g class="node pending" data-node="fun3d">
+          <rect class="body" x="868" y="440" width="308" height="156" rx="2"/>
+          <text class="ttl" x="886" y="468" style="font-size:15px">FUN3D · RANS</text>
+          <text class="mn amb" x="1082" y="468">NOT RUN</text>
+          <text class="mn" x="886" y="490">2× A100-40GB · spot</text>
+          <rect class="chip amb" x="886" y="504" width="272" height="22" rx="2"/>
+          <text class="chip-t amb" x="896" y="519">SA-neg · Re_c ~ 8e5 · transition sensitive</text>
+          <text class="sm" x="886" y="548">span efficiency · separation onset</text>
+          <text class="mn" x="886" y="576">the low-Re regime is where models disagree</text>
+        </g>
+      </svg>
+      </div>
+      <div class="legend">
+        <span class="lg-g"><i></i>coupled loop · measured geometry</span>
+        <span class="lg-b"><i></i>escalation to high fidelity</span>
+        <span class="lg-a"><i></i>notional · nothing run yet</span>
+        <span class="lg-h"><i></i>data links · animated = live traffic</span>
+        <span style="margin-left:auto">hover any block to trace its connections</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== WHAT CHANGES =============== -->
+  <section>
+    <div class="sec-head"><h2>What carries over, and what does not</h2><span class="tag">against the rocket workflow</span></div>
+    <p class="sec-intro">The loop, the caching, the provenance discipline and the escalation path are all reusable. <b>Every physics module is not.</b> This table is the honest scope of the port — anything marked <span style="color:var(--amber)">REPLACE</span> is new code, not a parameter change.</p>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Layer</th><th>Rocket (SV-1 / IV-1)</th><th>G3-1 UAS</th><th>Port</th></tr></thead>
+        <tbody>
+          <tr><td>Coupled loop</td><td>converge_point fixed point</td><td>identical</td><td class="num">REUSE</td></tr>
+          <tr><td>Geometry runner</td><td>nTop, convert-once-run-many</td><td>identical mechanism</td><td class="num">REUSE</td></tr>
+          <tr><td>Shape family</td><td>splined outer mould line</td><td>splined spanwise load</td><td class="num">REUSE</td></tr>
+          <tr><td>Glauert machinery</td><td>wave-drag Fourier series</td><td>lifting-line Fourier series</td><td class="num">REUSE</td></tr>
+          <tr><td>Propulsion</td><td>solid motor · grain · nozzle</td><td>piston HFE · propeller map</td><td class="tbd">REPLACE</td></tr>
+          <tr><td>Mission</td><td>3-DOF ballistic · staging</td><td>climb · cruise · loiter · recover</td><td class="tbd">REPLACE</td></tr>
+          <tr><td>Drag driver</td><td>wave + base, supersonic</td><td>induced + friction, M &lt; 0.3</td><td class="tbd">REPLACE</td></tr>
+          <tr><td>Sizing objective</td><td>minimise launch mass</td><td>maximise endurance at MTOW</td><td class="tbd">REPLACE</td></tr>
+          <tr><td>CFD</td><td>inviscid Euler is sufficient</td><td>RANS required, transition matters</td><td class="tbd">REPLACE</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- =============== FIDELITY LADDER =============== -->
+  <section>
+    <div class="sec-head"><h2>The fidelity ladder</h2><span class="tag">one design · three levels of physics</span></div>
+    <div class="cards">
+      <div class="card">
+        <div class="step"><span>STAGE A — GEOMETRY</span><span class="time">notional</span></div>
+        <h3>nTop</h3>
+        <div class="role">Implicit lofted OML · measured, not estimated</div>
+        <p>The airframe is one <b>implicit body</b>, lofted through splined sections: chord and twist along the span, closed against fuselage, boom and tail. Booleans and offsets are exact on the field rather than on a tessellation, so the notebook reports wetted area per component, tank volume, CG, inertia and the spanwise <span style="font-family:var(--mono);font-size:12px">c(y)</span> the aero model needs.</p>
+        <div class="out">
+          <em>→</em> wetted area by component &nbsp;·&nbsp; tank volume<br>
+          <em>→</em> c(y), twist(y) &nbsp;·&nbsp; CG &amp; inertia
+        </div>
+        <div class="status">NOT BUILT</div>
+      </div>
+      <div class="card">
+        <div class="step"><span>STAGE B — SIZING</span><span class="time">notional</span></div>
+        <h3>Endurance loop</h3>
+        <div class="role">Masses · lifting line · powerplant · mission</div>
+        <p>Same fixed point, different closure: <b>fuel mass depends on endurance, endurance depends on fuel mass.</b> Loiter is flown at the speed that minimises power required, not the speed that minimises drag — the two differ, and using the wrong one overstates endurance.</p>
+        <div class="out">
+          <em>→</em> endurance &amp; radius of action<br>
+          <em>→</em> constraint margins &nbsp;·&nbsp; mass statement
+        </div>
+        <div class="status">NOT BUILT</div>
+      </div>
+      <div class="card pend cfd">
+        <div class="step"><span>STAGE C — VALIDATION</span><span class="time">notional</span></div>
+        <h3>FUN3D RANS</h3>
+        <div class="role">Viscous CFD · GCP A100</div>
+        <p><b>Euler would be useless here.</b> The rocket's drag was pressure drag, so an inviscid solve answered the question. A wing's drag is friction and induced; without a boundary layer there is essentially nothing to measure. That means prisms, y+ near 1, and a turbulence model whose uncertainty is now part of the answer.</p>
+        <div class="out">
+          <em>→</em> span efficiency <em>e</em> against lifting-line<br>
+          <em>→</em> separation onset &nbsp;·&nbsp; C<sub>L,max</sub> credibility
+        </div>
+        <div class="status">NOT RUN</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== THE CLAIM =============== -->
+  <section>
+    <div class="sec-head"><h2>The claim under test</h2><span class="tag">the same series, a different drag</span></div>
+    <p class="sec-intro">The parallel is exact, and it is the reason this port is worth doing. Prandtl's lifting line writes the spanwise circulation as a Fourier series and gets an induced-drag penalty <b>δ = Σ n (A<sub>n</sub>/A<sub>1</sub>)²</b>, minimised when only the first mode survives — the <b>elliptic</b> loading. Slender-body wave drag writes <b>D/q = (π/4) Σ n A<sub>n</sub>²</b>, minimised when only the first mode survives — the <b>von Kármán</b> ogive. Same structure, same optimum, different physical drag. The series code in <span class="mn">sizing/wavedrag.py</span> transfers with the integrand swapped.</p>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Check</th><th>Against</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Elliptic loading</td><td>δ = 0, e = 1 exactly</td><td class="num">exact, provable</td></tr>
+          <tr><td>Elliptic IS the optimum</td><td>constrained minimisation of δ</td><td class="num">exact, provable</td></tr>
+          <tr><td>Straight taper</td><td>Glauert's published δ vs taper ratio</td><td class="tbd">to be measured</td></tr>
+          <tr><td>Spline planform</td><td>fraction of the δ gap recovered</td><td class="tbd">to be measured</td></tr>
+          <tr><td>Lifting line vs RANS</td><td>span efficiency at cruise C<sub>L</sub></td><td class="tbd">to be measured</td></tr>
+          <tr><td>Ratio at the taper baseline</td><td>must reproduce the unsplined result</td><td class="num">1.0 by construction</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="contract">
+      <b>MOCKUP — NOTHING HERE HAS BEEN RUN.</b>&nbsp;
+      Every value on this sheet is a requirement, a definition, or an exact result of classical theory.
+      There are <b>no measured results</b>, because no G3-1 geometry, sizing loop or solve exists yet.
+      The rocket sheet reports what happened; this one proposes what would.
+    </div>
+  </section>
+
+  <!-- =============== WHERE IT GETS HARD =============== -->
+  <section>
+    <div class="sec-head"><h2>Where this gets harder than the rocket</h2><span class="tag">known before starting</span></div>
+    <div class="cards two">
+      <div class="card">
+        <div class="step"><span>PHYSICS RISK</span><span class="time">low Reynolds</span></div>
+        <h3>Transition is not a detail</h3>
+        <div class="role">Chord Reynolds number around 8 × 10⁵</div>
+        <p>A Group 3 wing sits in the range where <b>laminar separation bubbles</b> form and where a fully-turbulent RANS solve can be wrong about drag by tens of percent. The rocket never had this problem: at Mach 2 and Re 10⁷ the boundary layer is turbulent everywhere and the question does not arise.</p>
+        <p><b>Consequence.</b> Either a transition model is used and its uncertainty declared, or the solve is run fully turbulent and reported as an <b>upper bound</b> on friction drag. Quietly running turbulent and calling it validation would be the failure mode.</p>
+      </div>
+      <div class="card">
+        <div class="step"><span>LOOP RISK</span><span class="time">closure</span></div>
+        <h3>The fuel fraction bites back</h3>
+        <div class="role">Endurance and fuel mass are mutually defined</div>
+        <p>The rocket's propellant was a design variable the sizer moved directly. Here fuel is an <b>outcome</b>: more fuel raises weight, which raises induced drag, which burns more fuel. The fixed point can diverge for a demanding endurance target rather than simply reporting an infeasible design.</p>
+        <p><b>Consequence.</b> The loop needs an explicit non-convergence path that reports the divergence as a result — the requirement being unreachable is itself the finding, exactly as the rocket's impossible Mach-1.5 impact was.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== LIFECYCLE =============== -->
+  <section>
+    <div class="sec-head"><h2>Anatomy of a design point</h2><span class="tag">from design vector to CFD verdict</span></div>
+    <ol class="steps">
+      <li><span>A <b>design vector</b> is proposed — span, aspect ratio, the spanwise load blend, installed power and fuel volume.</span></li>
+      <li><span>The <b>nTop notebook</b> lofts the wing from the splined chord and twist, and closes the fuselage, boom and tail around it.</span></li>
+      <li><span>nTop returns <b>measured</b> wetted area per component, tank volume, CG, inertia and the spanwise chord.</span></li>
+      <li><span><b>masses</b> builds the group-weight statement; empty mass is the correlation-driven line that endurance is most sensitive to.</span></li>
+      <li><span><b>aero</b> solves the lifting line for the splined loading, adds a parasite build-up on the measured wetted areas.</span></li>
+      <li><span><b>powerplant</b> matches engine BSFC and propeller efficiency at the loiter condition — the operating point, not a datasheet peak.</span></li>
+      <li><span><b>mission</b> integrates climb, cruise out, loiter, cruise back and reserve; the loop repeats until fuel mass stops moving.</span></li>
+      <li><span>The converged airframe escalates to <b>RANS</b>, which returns span efficiency and separation behaviour the lifting line cannot see.</span></li>
+    </ol>
+  </section>
+
+</main>
+
+<footer class="frame">
+  <span><span class="amb">■</span> G3-1 ENDURANCE UAS · WORKFLOW MOCKUP</span>
+  <span>nTOP + SIZING LOOP + FUN3D RANS</span>
+  <span>NOTIONAL · NOTHING RUN · NOT FOR CONSTRUCTION</span>
+</footer>
+
+<script>
+  const dia = document.getElementById('diagram');
+  const nodes = dia.querySelectorAll('.node');
+  const edges = dia.querySelectorAll('.edgegrp');
+  function clear(){
+    dia.classList.remove('dimmed');
+    dia.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  }
+  nodes.forEach(n=>{
+    const id = n.dataset.node;
+    n.addEventListener('mouseenter', ()=>{
+      clear();
+      dia.classList.add('dimmed');
+      n.classList.add('lit');
+      edges.forEach(e=>{
+        const ids = e.dataset.link.split(' ');
+        if(ids.includes(id)){
+          e.classList.add('lit');
+          ids.forEach(other=>{
+            const on = dia.querySelector(`.node[data-node="${other}"]`);
+            if(on) on.classList.add('lit');
+          });
+        }
+      });
+    });
+    n.addEventListener('mouseleave', clear);
+  });
+</script>
+</body>
+</html>
