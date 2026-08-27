@@ -238,10 +238,10 @@
     <div>
       <div class="eyebrow">Workflow · SHT 1 of 1</div>
       <h1>Coupled Conceptual Design<br><span class="thin">geometry in the loop, physics on the ladder</span></h1>
-      <p class="sub">A sizing loop where <b>nTop</b> measures the geometry and <b>SUAVE</b> flies it, iterated to a fixed point — then escalated to <b>FUN3D</b> on A100s to test the one number the low-fidelity model cannot falsify by itself.</p>
+      <p class="sub">A sizing loop where <b>nTop</b> measures the geometry and <b>SUAVE</b> flies it, iterated to a fixed point — then escalated to <b>FUN3D</b> on A100s, because the sizing loop cannot check its own aerodynamics.</p>
     </div>
     <div class="meta" aria-label="drawing title block">
-      <div><span>PROGRAM</span><span>SV-1 · IV-1 · splined OML</span></div>
+      <div><span>PROGRAM</span><span>SV-1 · IV-1 interceptors</span></div>
       <div><span>GEOMETRY</span><span class="grn">nTop · ntopcl 5.53.2</span></div>
       <div><span>PHYSICS</span><span>SUAVE 2.5.2 · in-repo</span></div>
       <div><span>VALIDATION</span><span class="amb">FUN3D · GCP 2× A100</span></div>
@@ -258,7 +258,7 @@
 
     <div class="diagram-shell">
       <div class="diagram-inner">
-      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures the geometry and SUAVE-side modules compute masses, aerodynamics, propulsion and trajectory; constraint residuals feed a pattern search that returns a new design vector. The converged geometry escalates to an AFLR3 volume mesh and a FUN3D solve on GCP A100 GPUs.">
+      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures the airframe geometry and modules compute masses, aerodynamics, propulsion and trajectory; constraint residuals feed a pattern search that returns a new design vector. The converged geometry escalates to an AFLR3 volume mesh and a FUN3D solve on GCP A100 GPUs.">
         <defs>
           <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0.6 L7.4,4 L0,7.4 Z" class="arrow"/>
@@ -313,7 +313,7 @@
         <g class="edgegrp" data-link="ntop surf">
           <path class="edge stl" d="M592,180 L868,180" marker-end="url(#arr)"/>
           <path class="flow b" d="M592,180 L868,180"/>
-          <text class="edge-label b" x="666" y="172">converged OML · analytic profile</text>
+          <text class="edge-label b" x="682" y="172">converged OML · watertight</text>
         </g>
         <g class="edgegrp" data-link="surf aflr">
           <path class="edge stl" d="M1022,212 L1022,252" marker-end="url(#arr)"/>
@@ -328,7 +328,7 @@
         <g class="edgegrp" data-link="fun3d aero">
           <path class="edge amb" d="M868,596 L824,596 L824,640 L599,640 L599,452" marker-end="url(#arr)"/>
           <path class="flow a" d="M868,596 L824,596 L824,640 L599,640 L599,452"/>
-          <text class="edge-label a" x="648" y="634">C_D verdict on the shape ratio</text>
+          <text class="edge-label a" x="654" y="634">C_D verdict on the drag build-up</text>
         </g>
 
         <!-- ================= nodes ================= -->
@@ -341,7 +341,7 @@
         <g class="node" data-node="dv">
           <rect class="body" x="44" y="296" width="160" height="80" rx="2"/>
           <text class="ttl" x="60" y="324" style="font-size:14px">Design vector</text>
-          <text class="mn" x="60" y="344">nose_blend · D · L</text>
+          <text class="mn" x="60" y="344">D · L · f_nose · m_p</text>
           <text class="sm" x="60" y="362">the search variables</text>
         </g>
 
@@ -349,8 +349,8 @@
           <rect class="body" x="264" y="140" width="328" height="160" rx="2"/>
           <text class="mn" x="282" y="166" style="letter-spacing:.14em">CONVERT ONCE · RUN MANY</text>
           <text class="ttl" x="282" y="198" style="font-size:19px">nTop notebook</text>
-          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">true revolved B-spline</text>
-          <text class="sm" x="282" y="248">every shape value is a live notebook input</text>
+          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">lofted OML + systems</text>
+          <text class="sm" x="282" y="248">SDF construction</text>
           <rect class="chip" x="282" y="260" width="196" height="22" rx="2"/>
           <text class="chip-t" x="292" y="275">ntopcl · 317 nodes · 23–32 s / point</text>
         </g>
@@ -368,7 +368,7 @@
           <text class="mn grn" x="408" y="376">02</text>
           <text class="ttl" x="408" y="398" style="font-size:14px">aero</text>
           <text class="sm" x="408" y="418">build-up + wave</text>
-          <text class="mn" x="408" y="438">Bonney × shape</text>
+          <text class="mn" x="408" y="438">wave · base · fin</text>
         </g>
         <g class="node" data-node="prop">
           <rect class="body" x="536" y="352" width="126" height="100" rx="2"/>
@@ -393,9 +393,9 @@
 
         <g class="node cloud" data-node="surf">
           <rect class="body" x="868" y="140" width="308" height="72" rx="2"/>
-          <text class="ttl" x="886" y="168" style="font-size:15px">Surface of revolution</text>
-          <text class="sm" x="886" y="188">tessellated from the exact profile</text>
-          <text class="mn stl" x="1104" y="168">±0.02 %</text>
+          <text class="ttl" x="886" y="166" style="font-size:15px">Interceptor OML</text>
+          <text class="sm" x="886" y="186">CFD-ready surface mesh</text>
+          <text class="mn stl" x="1104" y="166">±0.02 %</text>
         </g>
 
         <g class="node gpu" data-node="aflr">
@@ -414,9 +414,9 @@
           <text class="mn amb" x="1074" y="468">IN PROGRESS</text>
           <text class="mn" x="886" y="490">2× A100-40GB · spot</text>
           <rect class="chip amb" x="886" y="504" width="272" height="22" rx="2"/>
-          <text class="chip-t amb" x="896" y="519">6 solves · 2 shapes × M 1.5 / 2.5 / 3.5</text>
+          <text class="chip-t amb" x="896" y="519">forebody sweep · M 1.5 / 2.5 / 3.5</text>
           <text class="sm" x="886" y="548">Euler: what it reports IS pressure drag</text>
-          <text class="mn" x="886" y="576">tests the 0.87521 shape ratio</text>
+          <text class="mn" x="886" y="576">tests the forebody wave-drag term</text>
         </g>
       </svg>
       </div>
@@ -437,8 +437,8 @@
       <div class="card">
         <div class="step"><span>STAGE A — GEOMETRY</span><span class="time">23–72 s / point</span></div>
         <h3>nTop</h3>
-        <div class="role">Parametric OML · measured, not estimated</div>
-        <p>nTop revolves a <b>true B-spline</b> — no chord polygon, no discretisation error. Control points are computed inside the notebook from live inputs, so one converted <span style="font-family:var(--mono);font-size:12px">.ntop</span> serves every design point in a sweep. The notebook reports volume, wetted area, cavity, CG, inertia and S(x); the loop consumes measurements rather than closed forms.</p>
+        <div class="role">Lofted OML + systems · measured, not estimated</div>
+        <p>The airframe is built as a <b>signed distance field</b> — outer mould line, wall, bulkheads, bays and fins as one implicit body. Booleans and offsets are exact on the field rather than on a tessellation. Every dimension is a live notebook input, so one converted <span style="font-family:var(--mono);font-size:12px">.ntop</span> serves an entire sweep, and the loop consumes measurements rather than closed forms.</p>
         <div class="out">
           <em>→</em> volume · wetted area · cavity &nbsp;·&nbsp; CG &amp; inertia<br>
           <em>→</em> cross-section area distribution S(x)
@@ -460,10 +460,10 @@
         <div class="step"><span>STAGE C — VALIDATION</span><span class="time">~$2 / solve</span></div>
         <h3>FUN3D</h3>
         <div class="role">Inviscid CFD · GCP A100, spot</div>
-        <p>The sizing loop cannot falsify its own wave-drag model. CFD can. Body-only and <b>inviscid on purpose</b>: no fins, no skin friction, only <span style="font-family:var(--mono);font-size:12px">nose_shape</span> differing — so what the solver reports is pressure drag, which is exactly what the model claims to predict.</p>
+        <p>The sizing loop cannot falsify its own aerodynamics. CFD can. Forebody-only and <b>inviscid on purpose</b>: no fins and no skin friction, so what the solver reports is pressure drag — wave plus base — which is exactly the term the build-up claims to predict.</p>
         <div class="out">
-          <em>→</em> C<sub>D</sub> per shape at M 1.5 / 2.5 / 3.5<br>
-          <em>→</em> verdict on the 0.87521 shape ratio
+          <em>→</em> forebody C<sub>D</sub> at M 1.5 / 2.5 / 3.5<br>
+          <em>→</em> an independent check on the wave-drag term
         </div>
         <div class="status">MESHED · SOLVES PENDING</div>
       </div>
@@ -472,8 +472,8 @@
 
   <!-- =============== THE CLAIM =============== -->
   <section>
-    <div class="sec-head"><h2>The claim under test</h2><span class="tag">why stage C exists at all</span></div>
-    <p class="sec-intro">Before this work no drag model in the repository could tell one nose from another at fixed fineness — <span class="mn">CD_wave_body</span> is a function of <span class="mn">L/D</span> alone. A shape study run against that model would have reported <b>"no change"</b> for entirely the wrong reason. Slender-body theory supplies the missing sensitivity as a dimensionless <b>ratio</b>, so the calibrated drag level stays with the correlation validated against real flight data and only the shape effect comes from theory.</p>
+    <div class="sec-head"><h2>The drag model, and what checks it</h2><span class="tag">why stage C exists at all</span></div>
+    <p class="sec-intro">Forebody wave drag is the largest single term in this vehicle's supersonic drag — <b>22 percent of C<sub>D0</sub> at Mach 1.2, rising to 36 percent at Mach 4</b>. The build-up gets its level from a correlation validated against <b>23 Basic Finner free-flight shots</b>, and its slender-body machinery is checked against closed forms that are exact rather than fitted. Those checks constrain the theory; only CFD constrains the vehicle.</p>
 
     <div class="tbl-wrap">
       <table class="tbl">
@@ -484,7 +484,7 @@
           <tr><td>Optimum shape factor</td><td>4/π</td><td class="num">6.8e-5</td></tr>
           <tr><td>Glauert series</td><td>direct double integration</td><td class="num">converges onto it</td></tr>
           <tr><td>Von Kármán is the optimum</td><td>constrained minimisation</td><td class="num">asserted, not assumed</td></tr>
-          <tr><td>Ratio at the ogive shape</td><td>must reproduce every prior result</td><td class="num">exactly 1.0</td></tr>
+          <tr><td>Level, supersonic C<sub>D0</sub></td><td>23 Basic Finner free-flight shots</td><td class="num">calibrated</td></tr>
         </tbody>
       </table>
     </div>
@@ -499,28 +499,28 @@
 
   <!-- =============== WHAT THE LADDER FOUND =============== -->
   <section>
-    <div class="sec-head"><h2>What the ladder found</h2><span class="tag">low fidelity, both vehicles</span></div>
+    <div class="sec-head"><h2>What the ladder found</h2><span class="tag">stages A and B, both vehicles</span></div>
     <div class="cards two">
       <div class="card">
         <div class="step"><span>SV-1 · SINGLE STAGE</span><span class="time">10 of 10 met</span></div>
-        <h3>−3.0 kg · +4.7 km</h3>
-        <div class="role">551.3 kg launch mass · 194.0 km range</div>
-        <p>The sizer converged <span style="font-family:var(--mono);font-size:12px">nose_blend</span> to <b>0.7, not 1.0</b> — it had the drag optimum available and moved away from it, because the forebody volume given up and the aft shift in centre of pressure cost more than the remaining wave drag saves.</p>
-        <p><b>The saving was not free.</b> q_max rose from 193.5 to 199.1 kPa against a 200 kPa limit: lower drag buys speed, and speed is paid for in dynamic pressure.</p>
+        <h3>551.3 kg · 194.0 km</h3>
+        <div class="role">Impact Mach 1.68 · all ten constraints met</div>
+        <p>Converged in <b>60 evaluations</b> with real nTop geometry in the loop, then re-flown at a fine fixed step for the record. The binding constraints are <b>q_max at 199.1 kPa against a 200 kPa limit</b> and static margin at 1.02 calibres against 1.0 — this design sits hard against two limits at once.</p>
+        <p><b>The coupling is the largest effect here.</b> The same design vector with closed-form geometry reports 542.6 kg and 196.3 km — lighter and further — and is <b>infeasible</b> on both of those limits.</p>
         <div class="out">
           <em>→</em> 85-sample trade study · 0 failed to converge<br>
-          <em>→</em> analytic geometry would have called this design feasible — wrongly
+          <em>→</em> only the measured geometry finds the feasible answer
         </div>
       </div>
       <div class="card">
         <div class="step"><span>IV-1 · TWO STAGE</span><span class="time">15 of 15 met</span></div>
-        <h3>+22.3 % intercept altitude</h3>
-        <div class="role">19.95 km → 24.39 km at the same slant range</div>
-        <p>Slant range is pinned at the 100-mile requirement, so the drag saving does not appear as extra range. It appears as reaching that range <b>higher and faster</b> — which is what the binding constraints actually ask for. The spline is also feasible at a 36° pitchover where the ogive fails.</p>
+        <h3>100 mi · Mach 4.06 · 24.4 km</h3>
+        <div class="role">591.1 kg · all fifteen constraints met</div>
+        <p>Slant range is <b>pinned at the requirement</b>, so range is not the free variable — the vehicle is judged on how high and how fast it arrives, which is what A3 and A4 actually ask for. The pitchover angle is searched rather than chosen, because range is not monotone in it.</p>
         <p><b>Also a trade.</b> Aerodynamic lateral acceleration halves, 7.45 → 3.84 g, because the intercept is higher where dynamic pressure is lower. The requirement is met almost entirely by the attitude-control pack.</p>
         <div class="out">
-          <em>→</em> feasible region is wider, not merely better at one point<br>
-          <em>→</em> the vehicle is now more ACS-dependent than it was
+          <em>→</em> pitchover swept 32° to 38° · feasible above 36°<br>
+          <em>→</em> A11 is met by the ACS, not aerodynamically
         </div>
       </div>
     </div>
@@ -530,11 +530,11 @@
   <section>
     <div class="sec-head"><h2>Anatomy of a design point</h2><span class="tag">from design vector to CFD verdict</span></div>
     <ol class="steps">
-      <li><span>A <b>design vector</b> is proposed — diameter, length, fineness, propellant, and the shape blend.</span></li>
+      <li><span>A <b>design vector</b> is proposed — diameter, length, nose fineness, fin geometry and propellant split.</span></li>
       <li><span>The <b>nTop notebook</b> runs headless against the cached <span class="mn">.ntop</span>; only the input values change, so no re-convert.</span></li>
       <li><span>nTop returns <b>measured</b> volume, wetted area, cavity, CG, inertia and S(x) — not closed-form estimates.</span></li>
       <li><span><b>masses</b> builds a group-weight statement in which every line records whether it was measured or estimated.</span></li>
-      <li><span><b>aero</b> assembles the drag build-up and multiplies the forebody term by the slender-body <b>shape ratio</b>.</span></li>
+      <li><span><b>aero</b> assembles the drag build-up — friction, forebody wave, base, boattail, fins — on the measured areas.</span></li>
       <li><span><b>trajectory</b> integrates 3-DOF RK4 through every phase, with staging events as hard step boundaries.</span></li>
       <li><span>Constraint residuals drive a <b>pattern search</b>; the loop repeats until the design stops moving.</span></li>
       <li><span>The converged OML escalates to <b>AFLR3 + FUN3D</b>, where CFD returns a verdict the low-fidelity model could not give itself.</span></li>
@@ -545,7 +545,7 @@
 
 <footer class="frame">
   <span><span class="grn">■</span> COUPLED CONCEPTUAL DESIGN · nTOP + SUAVE + FUN3D</span>
-  <span>SV-1 · IV-1 · SPLINED OUTER MOULD LINE</span>
+  <span>SV-1 · IV-1 · INTERCEPTOR CONCEPTUAL SIZING</span>
   <span>STAGE C IN PROGRESS · NOT FOR CONSTRUCTION</span>
 </footer>
 
