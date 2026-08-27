@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coupled Conceptual Design — Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F0D;
+    --panel:#10161320;
+    --panel-solid:#101613;
+    --ink:#E9EEEB;
+    --muted:#8FA098;
+    --hair:rgba(150,170,160,.16);
+    --hair-strong:rgba(150,170,160,.30);
+    --green:#76B900;
+    --green-dim:rgba(118,185,0,.14);
+    --steel:#6FA8C9;
+    --steel-dim:rgba(111,168,201,.12);
+    --amber:#D9A441;
+    --amber-dim:rgba(217,164,65,.13);
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --disp:'Space Grotesk',var(--sans);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--green);color:#081100}
+
+  .frame{max-width:1280px;margin:0 auto;padding:0 28px}
+
+  /* ---------- title block ---------- */
+  header{border-bottom:1px solid var(--hair-strong)}
+  .tblock{
+    display:grid;grid-template-columns:1fr auto;gap:32px;
+    padding:44px 0 36px;align-items:end;
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+    color:var(--green);text-transform:uppercase;margin-bottom:18px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .eyebrow::after{content:"";height:1px;width:64px;background:var(--green);opacity:.5}
+  h1{
+    font-family:var(--disp);font-weight:600;
+    font-size:clamp(34px,4.6vw,58px);letter-spacing:-.015em;line-height:1.02;
+  }
+  h1 .thin{font-weight:400;color:var(--muted)}
+  .sub{margin-top:16px;max-width:660px;color:var(--muted);font-size:16.5px}
+  .sub b{color:var(--ink);font-weight:500}
+  .meta{font-family:var(--mono);font-size:11.5px;border:1px solid var(--hair-strong);min-width:262px}
+  .meta div{
+    display:flex;justify-content:space-between;gap:24px;
+    padding:8px 14px;border-bottom:1px solid var(--hair);
+  }
+  .meta div:last-child{border-bottom:none}
+  .meta span:first-child{color:var(--muted);letter-spacing:.08em}
+  .meta span:last-child{color:var(--ink)}
+  .meta .grn{color:var(--green) !important}
+  .meta .amb{color:var(--amber) !important}
+
+  /* ---------- section scaffolding ---------- */
+  section{padding:56px 0 8px}
+  .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:26px}
+  .sec-head h2{font-family:var(--disp);font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .sec-head .tag{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
+    color:var(--muted);text-transform:uppercase;
+  }
+  .sec-head::after{content:"";flex:1;height:1px;background:var(--hair)}
+
+  /* ---------- diagram ---------- */
+  .diagram-shell{
+    border:1px solid var(--hair-strong);
+    background:
+      linear-gradient(rgba(150,170,160,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(150,170,160,.035) 1px, transparent 1px);
+    background-size:28px 28px;
+    overflow-x:auto;
+  }
+  .diagram-inner{min-width:1080px}
+  svg{display:block;width:100%;height:auto}
+
+  svg text{font-family:var(--sans)}
+  .zone-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;fill:var(--muted)}
+  .zone-box{fill:none;stroke:var(--hair);stroke-dasharray:5 5}
+  .node rect.body{fill:var(--panel-solid);stroke:var(--hair-strong);transition:all .25s ease}
+  .node .ttl{font-family:var(--disp);font-size:15px;font-weight:600;fill:var(--ink)}
+  .node .sm{font-size:11.5px;fill:var(--muted)}
+  .node .mn{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+  .node .mn.grn{fill:var(--green)}
+  .node .mn.stl{fill:var(--steel)}
+  .node .mn.amb{fill:var(--amber)}
+  .chip{fill:var(--green-dim);stroke:rgba(118,185,0,.4)}
+  .chip-t{font-family:var(--mono);font-size:9.5px;fill:var(--green)}
+  .chip.blue{fill:var(--steel-dim);stroke:rgba(111,168,201,.4)}
+  .chip-t.blue{fill:var(--steel)}
+  .chip.amb{fill:var(--amber-dim);stroke:rgba(217,164,65,.45)}
+  .chip-t.amb{fill:var(--amber)}
+  .core rect.body{stroke:var(--green);stroke-width:1.4;filter:drop-shadow(0 0 14px rgba(118,185,0,.16))}
+  .gpu rect.body{stroke:rgba(118,185,0,.65)}
+  .cloud rect.body{stroke:rgba(111,168,201,.55)}
+  .pending rect.body{stroke:rgba(217,164,65,.6);stroke-dasharray:6 4}
+
+  .edge{stroke:var(--hair-strong);fill:none;stroke-width:1.2}
+  .edge.grn{stroke:rgba(118,185,0,.55)}
+  .edge.stl{stroke:rgba(111,168,201,.5)}
+  .edge.amb{stroke:rgba(217,164,65,.5)}
+  .flow{fill:none;stroke-width:1.6;stroke-dasharray:3 9;stroke-linecap:round}
+  .flow.g{stroke:var(--green)}
+  .flow.b{stroke:var(--steel)}
+  .flow.a{stroke:var(--amber)}
+  @media (prefers-reduced-motion: no-preference){
+    .flow{animation:dash 2.6s linear infinite}
+  }
+  @keyframes dash{to{stroke-dashoffset:-48}}
+  .edge-label{font-family:var(--mono);font-size:9.8px;fill:var(--muted)}
+  .edge-label.g{fill:var(--green)}
+  .edge-label.b{fill:var(--steel)}
+  .edge-label.a{fill:var(--amber)}
+  .arrow{fill:var(--hair-strong)}
+
+  .diagram.dimmed .node,.diagram.dimmed .edgegrp{opacity:.22;transition:opacity .2s}
+  .diagram.dimmed .node.lit,.diagram.dimmed .edgegrp.lit{opacity:1}
+  .node{cursor:default}
+
+  .legend{
+    display:flex;gap:28px;flex-wrap:wrap;padding:14px 18px;
+    border-top:1px solid var(--hair);
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.06em;
+  }
+  .legend i{display:inline-block;width:22px;height:0;border-top:2px solid;margin-right:8px;vertical-align:middle}
+  .legend .lg-g i{border-color:var(--green)}
+  .legend .lg-b i{border-color:var(--steel)}
+  .legend .lg-a i{border-color:var(--amber);border-top-style:dashed}
+  .legend .lg-h i{border-color:var(--hair-strong)}
+
+  /* ---------- cards ---------- */
+  .cards{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--hair);border:1px solid var(--hair-strong);
+  }
+  .card{background:var(--bg);padding:26px 24px 24px;position:relative}
+  .card .step{
+    font-family:var(--mono);font-size:10px;color:var(--muted);
+    letter-spacing:.2em;margin-bottom:14px;display:flex;justify-content:space-between;gap:10px;
+  }
+  .card .step .time{color:var(--green)}
+  .card h3{font-family:var(--disp);font-size:19px;font-weight:600;margin-bottom:4px}
+  .card .role{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+  .card p{font-size:13.5px;color:var(--muted);margin-bottom:16px}
+  .card p b{color:var(--ink);font-weight:500}
+  .out{font-family:var(--mono);font-size:10.5px;line-height:2;color:var(--muted)}
+  .out em{font-style:normal;color:var(--green)}
+  .card.cfd .step .time,.card.cfd .out em{color:var(--steel)}
+  .card.pend .step .time,.card.pend .out em{color:var(--amber)}
+  .card .status{
+    display:inline-block;margin-top:14px;padding:3px 10px;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+    border:1px solid rgba(118,185,0,.45);color:var(--green);background:var(--green-dim);
+  }
+  .card.pend .status{border-color:rgba(217,164,65,.5);color:var(--amber);background:var(--amber-dim)}
+
+  .sec-intro{color:var(--muted);font-size:14.5px;max-width:820px;margin:-8px 0 24px}
+  .sec-intro b{color:var(--ink);font-weight:500}
+  .sec-intro .mn{font-family:var(--mono);font-size:12px}
+  .cards.two{grid-template-columns:repeat(2,1fr)}
+
+  /* ---------- evidence table ---------- */
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tbl th{
+    font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);text-align:left;font-weight:400;
+    padding:10px 14px;border-bottom:1px solid var(--hair-strong);
+  }
+  .tbl td{padding:10px 14px;border-bottom:1px solid var(--hair);color:var(--muted)}
+  .tbl td:first-child{color:var(--ink)}
+  .tbl td.num{font-family:var(--mono);font-size:11.5px;color:var(--green);white-space:nowrap}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl-wrap{border:1px solid var(--hair-strong);overflow-x:auto}
+
+  .contract{
+    margin-top:22px;border:1px solid rgba(118,185,0,.45);background:var(--green-dim);
+    padding:14px 20px;font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--ink);
+  }
+  .contract b{color:var(--green);font-weight:500}
+  .agent-note{
+    padding:12px 18px;border-top:1px solid var(--hair);
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.05em;
+  }
+  .agent-note b{color:var(--green);font-weight:500}
+  .agent-note b.amb{color:var(--amber)}
+
+  /* ---------- lifecycle ---------- */
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:0 48px;counter-reset:st}
+  .steps li{
+    list-style:none;counter-increment:st;
+    display:grid;grid-template-columns:44px 1fr;gap:16px;
+    padding:16px 0;border-bottom:1px solid var(--hair);
+    font-size:14px;color:var(--muted);
+  }
+  .steps li::before{
+    content:counter(st,decimal-leading-zero);
+    font-family:var(--mono);font-size:13px;color:var(--green);padding-top:1px;
+  }
+  .steps li b{color:var(--ink);font-weight:500}
+  .steps li .mn{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  footer{
+    margin-top:72px;border-top:1px solid var(--hair-strong);padding:22px 0 40px;
+    display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.08em;
+  }
+  footer .grn{color:var(--green)}
+
+  @media (max-width:900px){
+    .cards,.cards.two{grid-template-columns:1fr}
+    .steps{grid-template-columns:1fr}
+    .tblock{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="frame tblock">
+    <div>
+      <div class="eyebrow">Workflow · SHT 1 of 1</div>
+      <h1>Coupled Conceptual Design<br><span class="thin">geometry in the loop, physics on the ladder</span></h1>
+      <p class="sub">A sizing loop where <b>nTop</b> measures the geometry and <b>SUAVE</b> flies it, iterated to a fixed point — then escalated to <b>FUN3D</b> on A100s to test the one number the low-fidelity model cannot falsify by itself.</p>
+    </div>
+    <div class="meta" aria-label="drawing title block">
+      <div><span>PROGRAM</span><span>SV-1 · IV-1 · splined OML</span></div>
+      <div><span>GEOMETRY</span><span class="grn">nTop · ntopcl 5.53.2</span></div>
+      <div><span>PHYSICS</span><span>SUAVE 2.5.2 · in-repo</span></div>
+      <div><span>VALIDATION</span><span class="amb">FUN3D · GCP 2× A100</span></div>
+      <div><span>SCALE</span><span>NTS</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="frame">
+
+  <!-- =============== DIAGRAM =============== -->
+  <section>
+    <div class="sec-head"><h2>System schematic</h2><span class="tag">the loop, and the escalation out of it</span></div>
+
+    <div class="diagram-shell">
+      <div class="diagram-inner">
+      <svg class="diagram" id="diagram" viewBox="0 0 1240 700" role="img" aria-label="Workflow diagram: requirements and a design vector feed a coupled fixed point in which an nTop notebook measures the geometry and SUAVE-side modules compute masses, aerodynamics, propulsion and trajectory; constraint residuals feed a pattern search that returns a new design vector. The converged geometry escalates to an AFLR3 volume mesh and a FUN3D solve on GCP A100 GPUs.">
+        <defs>
+          <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0.6 L7.4,4 L0,7.4 Z" class="arrow"/>
+          </marker>
+        </defs>
+
+        <!-- zones -->
+        <rect class="zone-box" x="24" y="86" width="200" height="576"/>
+        <text class="zone-label" x="36" y="112">DESIGN INTENT</text>
+
+        <rect class="zone-box" x="240" y="86" width="576" height="576"/>
+        <text class="zone-label" x="252" y="112">COUPLED FIXED POINT · LOCAL</text>
+
+        <rect class="zone-box" x="832" y="86" width="384" height="576"/>
+        <text class="zone-label" x="844" y="112">HIGH-FIDELITY VALIDATION · GCP</text>
+
+        <!-- ================= edges ================= -->
+        <g class="edgegrp" data-link="reqs dv">
+          <path class="edge" d="M124,232 L124,296" marker-end="url(#arr)"/>
+          <path class="flow g" d="M124,232 L124,296"/>
+          <text class="edge-label" x="134" y="268">bounds</text>
+        </g>
+        <g class="edgegrp" data-link="dv ntop">
+          <path class="edge" d="M204,336 L236,336 L236,222 L264,222" marker-end="url(#arr)"/>
+          <path class="flow g" d="M204,336 L236,336 L236,222 L264,222"/>
+          <text class="edge-label" x="212" y="318" transform="rotate(-90 212,318)">notebook inputs</text>
+        </g>
+        <g class="edgegrp" data-link="ntop masses aero prop traj">
+          <path class="edge" d="M428,300 L428,326"/>
+          <path class="edge" d="M315,326 L741,326"/>
+          <path class="edge" d="M315,326 L315,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M457,326 L457,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M599,326 L599,352" marker-end="url(#arr)"/>
+          <path class="edge" d="M741,326 L741,352" marker-end="url(#arr)"/>
+          <path class="flow g" d="M428,300 L428,326"/>
+          <text class="edge-label g" x="440" y="320">measured volume · area · CG · S(x)</text>
+        </g>
+        <g class="edgegrp" data-link="masses aero prop traj cons">
+          <path class="edge" d="M315,452 L315,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M457,452 L457,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M599,452 L599,556" marker-end="url(#arr)"/>
+          <path class="edge" d="M741,452 L741,556" marker-end="url(#arr)"/>
+          <text class="edge-label" x="620" y="520">state histories</text>
+        </g>
+        <!-- the feedback loop -->
+        <g class="edgegrp" data-link="cons dv">
+          <path class="edge grn" d="M252,592 L124,592 L124,376" marker-end="url(#arr)"/>
+          <path class="flow g" d="M252,592 L124,592 L124,376"/>
+          <text class="edge-label g" x="132" y="470" transform="rotate(-90 132,470)">residuals → new design vector</text>
+        </g>
+        <!-- escalation -->
+        <g class="edgegrp" data-link="ntop surf">
+          <path class="edge stl" d="M592,180 L868,180" marker-end="url(#arr)"/>
+          <path class="flow b" d="M592,180 L868,180"/>
+          <text class="edge-label b" x="666" y="172">converged OML · analytic profile</text>
+        </g>
+        <g class="edgegrp" data-link="surf aflr">
+          <path class="edge stl" d="M1022,212 L1022,252" marker-end="url(#arr)"/>
+          <path class="flow b" d="M1022,212 L1022,252"/>
+          <text class="edge-label b" x="1032" y="238">watertight STL</text>
+        </g>
+        <g class="edgegrp" data-link="aflr fun3d">
+          <path class="edge amb" d="M1022,380 L1022,440" marker-end="url(#arr)"/>
+          <path class="flow a" d="M1022,380 L1022,440"/>
+          <text class="edge-label a" x="1032" y="416">GCS · b8.ugrid</text>
+        </g>
+        <g class="edgegrp" data-link="fun3d aero">
+          <path class="edge amb" d="M868,596 L824,596 L824,640 L599,640 L599,452" marker-end="url(#arr)"/>
+          <path class="flow a" d="M868,596 L824,596 L824,640 L599,640 L599,452"/>
+          <text class="edge-label a" x="648" y="634">C_D verdict on the shape ratio</text>
+        </g>
+
+        <!-- ================= nodes ================= -->
+        <g class="node" data-node="reqs">
+          <rect class="body" x="44" y="140" width="160" height="92" rx="2"/>
+          <text class="ttl" x="60" y="168">Requirements</text>
+          <text class="sm" x="60" y="188">R1–R11 · A1–A12</text>
+          <text class="mn" x="60" y="212">SPEC.md</text>
+        </g>
+        <g class="node" data-node="dv">
+          <rect class="body" x="44" y="296" width="160" height="80" rx="2"/>
+          <text class="ttl" x="60" y="324" style="font-size:14px">Design vector</text>
+          <text class="mn" x="60" y="344">nose_blend · D · L</text>
+          <text class="sm" x="60" y="362">the search variables</text>
+        </g>
+
+        <g class="node core" data-node="ntop">
+          <rect class="body" x="264" y="140" width="328" height="160" rx="2"/>
+          <text class="mn" x="282" y="166" style="letter-spacing:.14em">CONVERT ONCE · RUN MANY</text>
+          <text class="ttl" x="282" y="198" style="font-size:19px">nTop notebook</text>
+          <text class="ttl" x="282" y="226" style="font-size:15px;fill:#76B900">true revolved B-spline</text>
+          <text class="sm" x="282" y="248">every shape value is a live notebook input</text>
+          <rect class="chip" x="282" y="260" width="196" height="22" rx="2"/>
+          <text class="chip-t" x="292" y="275">ntopcl · 317 nodes · 23–32 s / point</text>
+        </g>
+
+        <!-- physics rail -->
+        <g class="node" data-node="masses">
+          <rect class="body" x="252" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="266" y="376">01</text>
+          <text class="ttl" x="266" y="398" style="font-size:14px">masses</text>
+          <text class="sm" x="266" y="418">group weights</text>
+          <text class="mn" x="266" y="438">provenance / line</text>
+        </g>
+        <g class="node" data-node="aero">
+          <rect class="body" x="394" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="408" y="376">02</text>
+          <text class="ttl" x="408" y="398" style="font-size:14px">aero</text>
+          <text class="sm" x="408" y="418">build-up + wave</text>
+          <text class="mn" x="408" y="438">Bonney × shape</text>
+        </g>
+        <g class="node" data-node="prop">
+          <rect class="body" x="536" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="550" y="376">03</text>
+          <text class="ttl" x="550" y="398" style="font-size:14px">propulsion</text>
+          <text class="sm" x="550" y="418">solid motor</text>
+          <text class="mn" x="550" y="438">grain · nozzle</text>
+        </g>
+        <g class="node" data-node="traj">
+          <rect class="body" x="678" y="352" width="126" height="100" rx="2"/>
+          <text class="mn grn" x="692" y="376">04</text>
+          <text class="ttl" x="692" y="398" style="font-size:14px">trajectory</text>
+          <text class="sm" x="692" y="418">3-DOF RK4</text>
+          <text class="mn" x="692" y="438">staging events</text>
+        </g>
+
+        <g class="node" data-node="cons">
+          <rect class="body" x="252" y="556" width="552" height="72" rx="2"/>
+          <text class="ttl" x="270" y="584" style="font-size:14px">converge_point → constraints → pattern search</text>
+          <text class="mn" x="270" y="608">10 of 10 met · 60 evaluations in 2115 s · geometry measured, never assumed</text>
+        </g>
+
+        <g class="node cloud" data-node="surf">
+          <rect class="body" x="868" y="140" width="308" height="72" rx="2"/>
+          <text class="ttl" x="886" y="168" style="font-size:15px">Surface of revolution</text>
+          <text class="sm" x="886" y="188">tessellated from the exact profile</text>
+          <text class="mn stl" x="1104" y="168">±0.02 %</text>
+        </g>
+
+        <g class="node gpu" data-node="aflr">
+          <rect class="body" x="868" y="252" width="308" height="128" rx="2"/>
+          <text class="ttl" x="886" y="280" style="font-size:15px">AFLR3 volume mesh</text>
+          <text class="mn grn" x="1092" y="280">inviscid</text>
+          <text class="mn" x="886" y="302">farfield sphere r = 20 m</text>
+          <rect class="chip" x="886" y="316" width="272" height="22" rx="2"/>
+          <text class="chip-t" x="896" y="331">--num-layers 0 · 27 MB / 25 MB · ~30 s</text>
+          <text class="sm" x="886" y="362">tip truncated 2 mm — a sharp tip cannot be meshed</text>
+        </g>
+
+        <g class="node pending" data-node="fun3d">
+          <rect class="body" x="868" y="440" width="308" height="156" rx="2"/>
+          <text class="ttl" x="886" y="468" style="font-size:15px">FUN3D · fun3d-a2</text>
+          <text class="mn amb" x="1074" y="468">IN PROGRESS</text>
+          <text class="mn" x="886" y="490">2× A100-40GB · spot</text>
+          <rect class="chip amb" x="886" y="504" width="272" height="22" rx="2"/>
+          <text class="chip-t amb" x="896" y="519">6 solves · 2 shapes × M 1.5 / 2.5 / 3.5</text>
+          <text class="sm" x="886" y="548">Euler: what it reports IS pressure drag</text>
+          <text class="mn" x="886" y="576">tests the 0.87521 shape ratio</text>
+        </g>
+      </svg>
+      </div>
+      <div class="legend">
+        <span class="lg-g"><i></i>coupled loop · measured geometry</span>
+        <span class="lg-b"><i></i>escalation to high fidelity</span>
+        <span class="lg-a"><i></i>pending · not yet run</span>
+        <span class="lg-h"><i></i>data links · animated = live traffic</span>
+        <span style="margin-left:auto">hover any block to trace its connections</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== FIDELITY LADDER =============== -->
+  <section>
+    <div class="sec-head"><h2>The fidelity ladder</h2><span class="tag">one design · three levels of physics</span></div>
+    <div class="cards">
+      <div class="card">
+        <div class="step"><span>STAGE A — GEOMETRY</span><span class="time">23–72 s / point</span></div>
+        <h3>nTop</h3>
+        <div class="role">Parametric OML · measured, not estimated</div>
+        <p>nTop revolves a <b>true B-spline</b> — no chord polygon, no discretisation error. Control points are computed inside the notebook from live inputs, so one converted <span style="font-family:var(--mono);font-size:12px">.ntop</span> serves every design point in a sweep. The notebook reports volume, wetted area, cavity, CG, inertia and S(x); the loop consumes measurements rather than closed forms.</p>
+        <div class="out">
+          <em>→</em> volume · wetted area · cavity &nbsp;·&nbsp; CG &amp; inertia<br>
+          <em>→</em> cross-section area distribution S(x)
+        </div>
+        <div class="status">COMPLETE</div>
+      </div>
+      <div class="card">
+        <div class="step"><span>STAGE B — SIZING</span><span class="time">~35 s / evaluation</span></div>
+        <h3>SUAVE loop</h3>
+        <div class="role">Masses · aero · propulsion · 3-DOF trajectory</div>
+        <p>A <b>fixed point</b>, not a pipeline: masses need geometry, geometry needs masses. Each evaluation converges in about two iterations, then a pattern search moves the design vector against the constraint residuals. Cheap enough for an <b>85-sample trade study</b> with zero non-converged rows.</p>
+        <div class="out">
+          <em>→</em> converged design &nbsp;·&nbsp; constraint margins<br>
+          <em>→</em> mass statement with provenance per line
+        </div>
+        <div class="status">COMPLETE</div>
+      </div>
+      <div class="card pend cfd">
+        <div class="step"><span>STAGE C — VALIDATION</span><span class="time">~$2 / solve</span></div>
+        <h3>FUN3D</h3>
+        <div class="role">Inviscid CFD · GCP A100, spot</div>
+        <p>The sizing loop cannot falsify its own wave-drag model. CFD can. Body-only and <b>inviscid on purpose</b>: no fins, no skin friction, only <span style="font-family:var(--mono);font-size:12px">nose_shape</span> differing — so what the solver reports is pressure drag, which is exactly what the model claims to predict.</p>
+        <div class="out">
+          <em>→</em> C<sub>D</sub> per shape at M 1.5 / 2.5 / 3.5<br>
+          <em>→</em> verdict on the 0.87521 shape ratio
+        </div>
+        <div class="status">MESHED · SOLVES PENDING</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== THE CLAIM =============== -->
+  <section>
+    <div class="sec-head"><h2>The claim under test</h2><span class="tag">why stage C exists at all</span></div>
+    <p class="sec-intro">Before this work no drag model in the repository could tell one nose from another at fixed fineness — <span class="mn">CD_wave_body</span> is a function of <span class="mn">L/D</span> alone. A shape study run against that model would have reported <b>"no change"</b> for entirely the wrong reason. Slender-body theory supplies the missing sensitivity as a dimensionless <b>ratio</b>, so the calibrated drag level stays with the correlation validated against real flight data and only the shape effect comes from theory.</p>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Check</th><th>Against</th><th>Achieved</th></tr></thead>
+        <tbody>
+          <tr><td>Sears-Haack body</td><td>D/q = 128 V² / (π L⁴), closed form</td><td class="num">4.5e-5</td></tr>
+          <tr><td>Von Kármán ogive</td><td>C_D = (d/L)² on base area</td><td class="num">1.3e-5</td></tr>
+          <tr><td>Optimum shape factor</td><td>4/π</td><td class="num">6.8e-5</td></tr>
+          <tr><td>Glauert series</td><td>direct double integration</td><td class="num">converges onto it</td></tr>
+          <tr><td>Von Kármán is the optimum</td><td>constrained minimisation</td><td class="num">asserted, not assumed</td></tr>
+          <tr><td>Ratio at the ogive shape</td><td>must reproduce every prior result</td><td class="num">exactly 1.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="contract">
+      <b>THE EVIDENCE CONTRACT</b> — the rules that make the result worth reading:&nbsp;
+      <b>no invented numbers</b> — every constant carries a source, and a guess must say <span style="color:var(--amber)">GUESS</span> ·
+      <b>validate outside the repo</b> — each physics module reproduces a published or analytic case ·
+      <b>failures are recorded, never swallowed</b> — a DOE row that fails is reported as non-converged, not dropped.
+    </div>
+  </section>
+
+  <!-- =============== WHAT THE LADDER FOUND =============== -->
+  <section>
+    <div class="sec-head"><h2>What the ladder found</h2><span class="tag">low fidelity, both vehicles</span></div>
+    <div class="cards two">
+      <div class="card">
+        <div class="step"><span>SV-1 · SINGLE STAGE</span><span class="time">10 of 10 met</span></div>
+        <h3>−3.0 kg · +4.7 km</h3>
+        <div class="role">551.3 kg launch mass · 194.0 km range</div>
+        <p>The sizer converged <span style="font-family:var(--mono);font-size:12px">nose_blend</span> to <b>0.7, not 1.0</b> — it had the drag optimum available and moved away from it, because the forebody volume given up and the aft shift in centre of pressure cost more than the remaining wave drag saves.</p>
+        <p><b>The saving was not free.</b> q_max rose from 193.5 to 199.1 kPa against a 200 kPa limit: lower drag buys speed, and speed is paid for in dynamic pressure.</p>
+        <div class="out">
+          <em>→</em> 85-sample trade study · 0 failed to converge<br>
+          <em>→</em> analytic geometry would have called this design feasible — wrongly
+        </div>
+      </div>
+      <div class="card">
+        <div class="step"><span>IV-1 · TWO STAGE</span><span class="time">15 of 15 met</span></div>
+        <h3>+22.3 % intercept altitude</h3>
+        <div class="role">19.95 km → 24.39 km at the same slant range</div>
+        <p>Slant range is pinned at the 100-mile requirement, so the drag saving does not appear as extra range. It appears as reaching that range <b>higher and faster</b> — which is what the binding constraints actually ask for. The spline is also feasible at a 36° pitchover where the ogive fails.</p>
+        <p><b>Also a trade.</b> Aerodynamic lateral acceleration halves, 7.45 → 3.84 g, because the intercept is higher where dynamic pressure is lower. The requirement is met almost entirely by the attitude-control pack.</p>
+        <div class="out">
+          <em>→</em> feasible region is wider, not merely better at one point<br>
+          <em>→</em> the vehicle is now more ACS-dependent than it was
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== LIFECYCLE =============== -->
+  <section>
+    <div class="sec-head"><h2>Anatomy of a design point</h2><span class="tag">from design vector to CFD verdict</span></div>
+    <ol class="steps">
+      <li><span>A <b>design vector</b> is proposed — diameter, length, fineness, propellant, and the shape blend.</span></li>
+      <li><span>The <b>nTop notebook</b> runs headless against the cached <span class="mn">.ntop</span>; only the input values change, so no re-convert.</span></li>
+      <li><span>nTop returns <b>measured</b> volume, wetted area, cavity, CG, inertia and S(x) — not closed-form estimates.</span></li>
+      <li><span><b>masses</b> builds a group-weight statement in which every line records whether it was measured or estimated.</span></li>
+      <li><span><b>aero</b> assembles the drag build-up and multiplies the forebody term by the slender-body <b>shape ratio</b>.</span></li>
+      <li><span><b>trajectory</b> integrates 3-DOF RK4 through every phase, with staging events as hard step boundaries.</span></li>
+      <li><span>Constraint residuals drive a <b>pattern search</b>; the loop repeats until the design stops moving.</span></li>
+      <li><span>The converged OML escalates to <b>AFLR3 + FUN3D</b>, where CFD returns a verdict the low-fidelity model could not give itself.</span></li>
+    </ol>
+  </section>
+
+</main>
+
+<footer class="frame">
+  <span><span class="grn">■</span> COUPLED CONCEPTUAL DESIGN · nTOP + SUAVE + FUN3D</span>
+  <span>SV-1 · IV-1 · SPLINED OUTER MOULD LINE</span>
+  <span>STAGE C IN PROGRESS · NOT FOR CONSTRUCTION</span>
+</footer>
+
+<script>
+  const dia = document.getElementById('diagram');
+  const nodes = dia.querySelectorAll('.node');
+  const edges = dia.querySelectorAll('.edgegrp');
+  function clear(){
+    dia.classList.remove('dimmed');
+    dia.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  }
+  nodes.forEach(n=>{
+    const id = n.dataset.node;
+    n.addEventListener('mouseenter', ()=>{
+      clear();
+      dia.classList.add('dimmed');
+      n.classList.add('lit');
+      edges.forEach(e=>{
+        const ids = e.dataset.link.split(' ');
+        if(ids.includes(id)){
+          e.classList.add('lit');
+          ids.forEach(other=>{
+            const on = dia.querySelector(`.node[data-node="${other}"]`);
+            if(on) on.classList.add('lit');
+          });
+        }
+      });
+    });
+    n.addEventListener('mouseleave', clear);
+  });
+</script>
+</body>
+</html>
